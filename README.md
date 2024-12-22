@@ -1,6 +1,6 @@
 # WhisperDictate
 
-![icon_128x128](https://github.com/user-attachments/assets/11507585-5073-46ee-bf56-21992e954110)
+![icon_128x128](https://github.com/user-attachments/assets/4780e5f1-e609-45f8-acb9-e4e8053461e1)
 
 A macOS menu bar app that lets you dictate text anywhere using OpenAI's Whisper API. Just press a hotkey, speak, and your words will be typed wherever your cursor is.
 
