@@ -31,9 +31,9 @@ A macOS menu bar app that lets you dictate text anywhere using OpenAI's Whisper 
 ## Usage
 
 1. Place your cursor where you want to type
-2. Press ⌘+Shift+R (or click Record in the menu)
+2. Press ⌘+Shift+R
 3. Speak clearly
-4. Release the hotkey to stop recording
+4. Press ⌘+Shift+R again to stop recording
 5. Wait for transcription (1-2 seconds)
 6. Your text will be typed automatically
 
@@ -51,16 +51,6 @@ git clone https://github.com/yourusername/whisper-dictate.git
 cd whisper-dictate
 open WhisperDictate.xcodeproj
 ```
-
-## Contributing
-
-Contributions are welcome! Some ideas for improvements:
-
-- Customizable hotkeys
-- Transcription history
-- Different Whisper models
-- Language selection
-- Auto-punctuation options
 
 ## License
 
