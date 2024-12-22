@@ -6,7 +6,7 @@ A macOS menu bar app that lets you dictate text anywhere using OpenAI's Whisper 
 
 ## Features
 
-- 🎙️ Quick recording with global hotkey (⌘⌃Space)
+- 🎙️ Quick recording with global hotkey (⌘+Shift+R)
 - 🤖 Fast, accurate transcription using OpenAI's Whisper API
 - ⌨️ Types text directly into any app
 - 🔒 Secure API key storage
