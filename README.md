@@ -31,7 +31,7 @@ A macOS menu bar app that lets you dictate text anywhere using OpenAI's Whisper 
 ## Usage
 
 1. Place your cursor where you want to type
-2. Press ⌘⌃Space (or click Record in the menu)
+2. Press ⌘+Shift+R (or click Record in the menu)
 3. Speak clearly
 4. Release the hotkey to stop recording
 5. Wait for transcription (1-2 seconds)
