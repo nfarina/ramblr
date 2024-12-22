@@ -1,6 +1,6 @@
 # WhisperDictate
 
-<img src="WhisperDictate/Assets.xcassets/AppIcon.appiconset/mac512.png" width="128" height="128" alt="WhisperDictate Icon">
+![icon_128x128](https://github.com/user-attachments/assets/11507585-5073-46ee-bf56-21992e954110)
 
 A macOS menu bar app that lets you dictate text anywhere using OpenAI's Whisper API. Just press a hotkey, speak, and your words will be typed wherever your cursor is.
 
