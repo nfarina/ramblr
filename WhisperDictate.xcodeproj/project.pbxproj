@@ -10,9 +10,22 @@
 		01607EFB2D1883C80006DBE4 /* WhisperDictate.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WhisperDictate.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		01607F232D1898E10006DBE4 /* Exceptions for "WhisperDictate" folder in "WhisperDictate" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 01607EFA2D1883C80006DBE4 /* WhisperDictate */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		01607EFD2D1883C80006DBE4 /* WhisperDictate */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				01607F232D1898E10006DBE4 /* Exceptions for "WhisperDictate" folder in "WhisperDictate" target */,
+			);
 			path = WhisperDictate;
 			sourceTree = "<group>";
 		};
@@ -255,7 +268,9 @@
 				DEVELOPMENT_ASSET_PATHS = "\"WhisperDictate/Preview Content\"";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = WhisperDictate/Info.plist;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "WhisperDictate needs the microphone to capture your voice for dictation.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -280,7 +295,9 @@
 				DEVELOPMENT_ASSET_PATHS = "\"WhisperDictate/Preview Content\"";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = WhisperDictate/Info.plist;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "WhisperDictate needs the microphone to capture your voice for dictation.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
