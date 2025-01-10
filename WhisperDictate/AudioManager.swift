@@ -10,6 +10,7 @@ class AudioManager: NSObject, ObservableObject {
     private var recordingURL: URL?
     private var converter: AVAudioConverter?
     private var volumeMeter: AVAudioMixerNode?
+    private let audioQueue = DispatchQueue(label: "com.nfarina.WhisperDictate.audio")
     
     override init() {
         super.init()
@@ -72,81 +73,93 @@ class AudioManager: NSObject, ObservableObject {
         audioEngine.prepare()
         
         volumeMeter.installTap(onBus: 0, bufferSize: 1024, format: inputFormat) { [weak self] (buffer, time) in
-            guard let self = self,
-                  let recordingURL = self.recordingURL else { return }
-            
-            var convertedBuffer: AVAudioPCMBuffer?
-            
-            if self.converter == nil && inputFormat != whisperFormat {
-                self.converter = AVAudioConverter(from: inputFormat, to: whisperFormat)
-            }
-            
-            if let converter = self.converter {
-                let frameCount = AVAudioFrameCount(Float(buffer.frameLength) * Float(16000) / Float(inputFormat.sampleRate))
-                convertedBuffer = AVAudioPCMBuffer(pcmFormat: whisperFormat,
-                                                 frameCapacity: frameCount)
-                convertedBuffer?.frameLength = frameCount
+            self?.audioQueue.async { [weak self] in
+                guard let self = self,
+                      let recordingURL = self.recordingURL,
+                      self.isRecording else { return }
                 
-                var error: NSError?
-                let inputBlock: AVAudioConverterInputBlock = { inNumPackets, outStatus in
-                    outStatus.pointee = .haveData
-                    return buffer
+                var convertedBuffer: AVAudioPCMBuffer?
+                
+                if self.converter == nil && inputFormat != whisperFormat {
+                    self.converter = AVAudioConverter(from: inputFormat, to: whisperFormat)
                 }
                 
-                converter.convert(to: convertedBuffer!,
-                                error: &error,
-                                withInputFrom: inputBlock)
-                
-                if error != nil { return }
-            } else {
-                convertedBuffer = buffer
-            }
-            
-            guard let finalBuffer = convertedBuffer else { return }
-            
-            if self.audioFile == nil {
-                do {
-                    self.audioFile = try AVAudioFile(forWriting: recordingURL,
-                                                    settings: whisperFormat.settings)
-                } catch {
-                    return
+                if let converter = self.converter {
+                    let frameCount = AVAudioFrameCount(Float(buffer.frameLength) * Float(16000) / Float(inputFormat.sampleRate))
+                    convertedBuffer = AVAudioPCMBuffer(pcmFormat: whisperFormat,
+                                                     frameCapacity: frameCount)
+                    convertedBuffer?.frameLength = frameCount
+                    
+                    var error: NSError?
+                    let inputBlock: AVAudioConverterInputBlock = { inNumPackets, outStatus in
+                        outStatus.pointee = .haveData
+                        return buffer
+                    }
+                    
+                    converter.convert(to: convertedBuffer!,
+                                    error: &error,
+                                    withInputFrom: inputBlock)
+                    
+                    if error != nil { return }
+                } else {
+                    convertedBuffer = buffer
                 }
+                
+                guard let finalBuffer = convertedBuffer else { return }
+                
+                if self.audioFile == nil {
+                    do {
+                        self.audioFile = try AVAudioFile(forWriting: recordingURL,
+                                                        settings: whisperFormat.settings)
+                    } catch {
+                        return
+                    }
+                }
+                
+                try? self.audioFile?.write(from: finalBuffer)
             }
-            
-            try? self.audioFile?.write(from: finalBuffer)
         }
     }
     
     func startRecording() {
-        guard let audioEngine = audioEngine else { return }
-        
-        try? FileManager.default.removeItem(at: recordingURL!)
-        audioFile = nil
-        
-        do {
-            try audioEngine.start()
-            isRecording = true
-            NotificationCenter.default.post(name: NSNotification.Name("RecordingStatusChanged"),
-                                         object: nil,
-                                         userInfo: ["isRecording": true])
-        } catch {
-            print("Failed to start recording: \(error.localizedDescription)")
+        audioQueue.async { [weak self] in
+            guard let self = self,
+                  let audioEngine = self.audioEngine else { return }
+            
+            try? FileManager.default.removeItem(at: self.recordingURL!)
+            self.audioFile = nil
+            
+            do {
+                try audioEngine.start()
+                DispatchQueue.main.async {
+                    self.isRecording = true
+                    NotificationCenter.default.post(name: NSNotification.Name("RecordingStatusChanged"),
+                                                 object: nil,
+                                                 userInfo: ["isRecording": true])
+                }
+            } catch {
+                print("Failed to start recording: \(error.localizedDescription)")
+            }
         }
     }
     
     func stopRecording() -> URL? {
         guard let recordingURL = recordingURL else { return nil }
         
-        audioEngine?.stop()
-        volumeMeter?.removeTap(onBus: 0)
-        audioFile = nil
+        // First mark as not recording to prevent new audio data from being processed
         isRecording = false
+        
+        // Synchronously stop audio processing
+        audioQueue.sync { [weak self] in
+            self?.audioEngine?.stop()
+            self?.volumeMeter?.removeTap(onBus: 0)
+            self?.audioFile = nil
+        }
         
         NotificationCenter.default.post(name: NSNotification.Name("RecordingStatusChanged"),
                                      object: nil,
                                      userInfo: ["isRecording": false])
         
-        setupAudioEngine()
         return recordingURL
     }
 }
