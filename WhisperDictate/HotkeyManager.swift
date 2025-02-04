@@ -49,9 +49,9 @@ class HotkeyManager: ObservableObject {
             return noErr
         }, 1, &eventType, nil, &eventHandler)
         
-        // Register hotkey (CMD + SHIFT + R)
+        // Register hotkey (CMD + CTRL + R)
         RegisterEventHotKey(UInt32(kVK_ANSI_R),
-                          UInt32(cmdKey | shiftKey),
+                          UInt32(cmdKey | controlKey),
                           gMyHotKeyID,
                           GetApplicationEventTarget(),
                           0,

@@ -44,18 +44,25 @@ class AudioManager: NSObject, ObservableObject {
     }
     
     private func setupRecordingURL() {
-        let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        recordingURL = documentsPath.appendingPathComponent("recording.wav")
+        let tempPath = URL(fileURLWithPath: "/tmp")
+        recordingURL = tempPath.appendingPathComponent("whisper-dictate-recording.wav")
         try? FileManager.default.removeItem(at: recordingURL!)
     }
     
     private func setupAudioEngine() {
-        audioEngine = AVAudioEngine()
+        print("AudioManager: Setting up audio engine")
         
+        // Clean up existing engine if any
+        cleanupAudioEngine()
+        
+        audioEngine = AVAudioEngine()
         guard let audioEngine = audioEngine else { return }
         
         inputNode = audioEngine.inputNode
-        guard let inputNode = inputNode else { return }
+        guard let inputNode = inputNode else {
+            print("AudioManager: Failed to get input node")
+            return
+        }
         
         volumeMeter = AVAudioMixerNode()
         guard let volumeMeter = volumeMeter else { return }
@@ -67,6 +74,9 @@ class AudioManager: NSObject, ObservableObject {
                                         sampleRate: 16000,
                                         channels: 1,
                                         interleaved: false)!
+        
+        print("AudioManager: Input format: \(inputFormat)")
+        print("AudioManager: Whisper format: \(whisperFormat)")
         
         volumeMeter.volume = 1.0
         audioEngine.connect(inputNode, to: volumeMeter, format: inputFormat)
@@ -100,7 +110,10 @@ class AudioManager: NSObject, ObservableObject {
                                     error: &error,
                                     withInputFrom: inputBlock)
                     
-                    if error != nil { return }
+                    if error != nil {
+                        print("AudioManager: Conversion error: \(error!)")
+                        return
+                    }
                 } else {
                     convertedBuffer = buffer
                 }
@@ -111,20 +124,47 @@ class AudioManager: NSObject, ObservableObject {
                     do {
                         self.audioFile = try AVAudioFile(forWriting: recordingURL,
                                                         settings: whisperFormat.settings)
+                        print("AudioManager: Created new audio file at \(recordingURL)")
                     } catch {
+                        print("AudioManager: Failed to create audio file: \(error)")
                         return
                     }
                 }
                 
-                try? self.audioFile?.write(from: finalBuffer)
+                do {
+                    try self.audioFile?.write(from: finalBuffer)
+                } catch {
+                    print("AudioManager: Failed to write buffer: \(error)")
+                }
             }
         }
     }
     
+    private func cleanupAudioEngine() {
+        print("AudioManager: Cleaning up audio engine")
+        audioEngine?.stop()
+        volumeMeter?.removeTap(onBus: 0)
+        audioEngine = nil
+        inputNode = nil
+        volumeMeter = nil
+        converter = nil
+        audioFile = nil
+    }
+    
     func startRecording() {
+        print("AudioManager: Starting recording")
         audioQueue.async { [weak self] in
-            guard let self = self,
-                  let audioEngine = self.audioEngine else { return }
+            guard let self = self else { return }
+            
+            // Make sure we have a fresh audio engine setup
+            DispatchQueue.main.sync {
+                self.setupAudioEngine()
+            }
+            
+            guard let audioEngine = self.audioEngine else {
+                print("AudioManager: No audio engine available")
+                return
+            }
             
             try? FileManager.default.removeItem(at: self.recordingURL!)
             self.audioFile = nil
@@ -137,29 +177,47 @@ class AudioManager: NSObject, ObservableObject {
                                                  object: nil,
                                                  userInfo: ["isRecording": true])
                 }
+                print("AudioManager: Recording started successfully")
             } catch {
-                print("Failed to start recording: \(error.localizedDescription)")
+                print("AudioManager: Failed to start recording: \(error.localizedDescription)")
             }
         }
     }
     
     func stopRecording() -> URL? {
-        guard let recordingURL = recordingURL else { return nil }
+        print("AudioManager: Stopping recording")
+        guard let recordingURL = recordingURL else {
+            print("AudioManager: No recording URL available")
+            return nil
+        }
         
         // First mark as not recording to prevent new audio data from being processed
         isRecording = false
         
-        // Synchronously stop audio processing
+        // Synchronously stop audio processing and close file
         audioQueue.sync { [weak self] in
+            print("AudioManager: Stopping audio engine and cleaning up")
             self?.audioEngine?.stop()
             self?.volumeMeter?.removeTap(onBus: 0)
+            // Close the audio file explicitly
+            if let audioFile = self?.audioFile {
+                audioFile.close()
+            }
             self?.audioFile = nil
+            // Clean up the engine for next recording
+            self?.cleanupAudioEngine()
         }
         
         NotificationCenter.default.post(name: NSNotification.Name("RecordingStatusChanged"),
                                      object: nil,
                                      userInfo: ["isRecording": false])
         
-        return recordingURL
+        // Verify the file exists before returning
+        if FileManager.default.fileExists(atPath: recordingURL.path) {
+            print("AudioManager: Recording saved successfully at \(recordingURL)")
+            return recordingURL
+        }
+        print("AudioManager: Recording file not found at \(recordingURL)")
+        return nil
     }
 }

@@ -4,10 +4,12 @@ import CoreGraphics
 
 class TranscriptionManager: ObservableObject {
     @Published var isTranscribing = false
+    @Published var hasAccessibilityPermission = false
     private var apiKey: String?
     
     init() {
         loadAPIKey()
+        checkAccessibilityPermission()
     }
     
     private func loadAPIKey() {
@@ -17,6 +19,17 @@ class TranscriptionManager: ObservableObject {
     func setAPIKey(_ key: String) {
         apiKey = key
         UserDefaults.standard.set(key, forKey: "OpenAIAPIKey")
+    }
+    
+    private func checkAccessibilityPermission() {
+        // Check if we have accessibility permission
+        let trusted = AXIsProcessTrusted()
+        DispatchQueue.main.async {
+            self.hasAccessibilityPermission = trusted
+            if !trusted {
+                self.showAccessibilityAlert()
+            }
+        }
     }
     
     func transcribe(audioURL: URL, completion: @escaping (String?) -> Void) {
@@ -79,6 +92,13 @@ class TranscriptionManager: ObservableObject {
     func pasteText(_ text: String) {
         print("Starting pasteText...")
         
+        // First check if we have accessibility permission
+        if !AXIsProcessTrusted() {
+            print("No accessibility permission")
+            showAccessibilityAlert()
+            return
+        }
+        
         let script = """
         tell application "System Events"
             keystroke "\(text)"
@@ -90,7 +110,8 @@ class TranscriptionManager: ObservableObject {
             let output = scriptObject.executeAndReturnError(&error)
             if let error = error {
                 print("AppleScript error:", error)
-                showAccessibilityAlert()
+                // If we get an error, recheck permissions as they might have been revoked
+                checkAccessibilityPermission()
             } else {
                 print("Successfully typed text")
             }
@@ -100,7 +121,7 @@ class TranscriptionManager: ObservableObject {
     private func showAccessibilityAlert() {
         let alert = NSAlert()
         alert.messageText = "Permission Required"
-        alert.informativeText = "WhisperDictate needs accessibility permission to simulate keyboard events. Please grant access in System Settings > Privacy & Security > Accessibility."
+        alert.informativeText = "WhisperDictate needs accessibility permission to simulate keyboard events. Please grant access in System Settings > Privacy & Security > Accessibility, then quit and relaunch WhisperDictate."
         alert.alertStyle = .warning
         alert.addButton(withTitle: "Open System Settings")
         alert.addButton(withTitle: "Cancel")

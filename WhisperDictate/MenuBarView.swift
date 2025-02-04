@@ -1,35 +1,5 @@
 import SwiftUI
 
-class RecordingCoordinator: ObservableObject {
-    private var audioManager: AudioManager
-    private var transcriptionManager: TranscriptionManager
-    
-    init(audioManager: AudioManager, transcriptionManager: TranscriptionManager) {
-        self.audioManager = audioManager
-        self.transcriptionManager = transcriptionManager
-        
-        NotificationCenter.default.addObserver(forName: NSNotification.Name("HotkeyPressed"),
-                                             object: nil,
-                                             queue: .main) { [weak self] _ in
-            self?.toggleRecording()
-        }
-    }
-    
-    private func toggleRecording() {
-        if audioManager.isRecording {
-            if let recordingURL = audioManager.stopRecording() {
-                transcriptionManager.transcribe(audioURL: recordingURL) { text in
-                    if let text = text {
-                        self.transcriptionManager.pasteText(text)
-                    }
-                }
-            }
-        } else {
-            audioManager.startRecording()
-        }
-    }
-}
-
 struct MenuBarView: View {
     @ObservedObject var audioManager: AudioManager
     @ObservedObject var hotkeyManager: HotkeyManager
@@ -52,8 +22,16 @@ struct MenuBarView: View {
             
             HStack {
                 Text("Status:")
-                Text(audioManager.isRecording ? "Recording..." : "Ready")
-                    .foregroundColor(audioManager.isRecording ? .red : .primary)
+                if !transcriptionManager.hasAccessibilityPermission {
+                    Text("Needs Accessibility Permission")
+                        .foregroundColor(.red)
+                } else if audioManager.isRecording {
+                    Text("Recording...")
+                        .foregroundColor(.red)
+                } else {
+                    Text("Ready")
+                        .foregroundColor(.primary)
+                }
             }
             
             Divider()
@@ -68,7 +46,19 @@ struct MenuBarView: View {
             }
             .padding(.vertical, 5)
             
-            Text("Press ⌘⇧R to start/stop recording")
+            if !transcriptionManager.hasAccessibilityPermission {
+                Text("⚠️ Accessibility permission required")
+                    .font(.caption)
+                    .foregroundColor(.red)
+                Button("Open System Settings") {
+                    if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
+                        NSWorkspace.shared.open(url)
+                    }
+                }
+                .padding(.bottom, 5)
+            }
+            
+            Text("Press ⌘⌃R to start/stop recording")
                 .font(.caption)
                 .foregroundColor(.secondary)
             
