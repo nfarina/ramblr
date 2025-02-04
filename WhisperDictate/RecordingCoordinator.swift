@@ -3,14 +3,20 @@ import SwiftUI
 class RecordingCoordinator: ObservableObject {
     private var audioManager: AudioManager
     private var transcriptionManager: TranscriptionManager
+    private var notificationObserver: NSObjectProtocol?
     
     init(audioManager: AudioManager, transcriptionManager: TranscriptionManager) {
+        print("RecordingCoordinator: Initializing")
         self.audioManager = audioManager
         self.transcriptionManager = transcriptionManager
         
-        NotificationCenter.default.addObserver(forName: NSNotification.Name("HotkeyPressed"),
-                                             object: nil,
-                                             queue: .main) { [weak self] _ in
+        // Store the observer so it doesn't get deallocated
+        self.notificationObserver = NotificationCenter.default.addObserver(
+            forName: NSNotification.Name("HotkeyPressed"),
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            print("RecordingCoordinator: Received hotkey notification")
             self?.toggleRecording()
         }
     }
@@ -76,5 +82,11 @@ class RecordingCoordinator: ObservableObject {
         alert.alertStyle = .warning
         alert.addButton(withTitle: "OK")
         alert.runModal()
+    }
+    
+    deinit {
+        if let observer = notificationObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
     }
 } 

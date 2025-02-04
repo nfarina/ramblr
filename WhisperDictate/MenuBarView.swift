@@ -4,14 +4,14 @@ struct MenuBarView: View {
     @ObservedObject var audioManager: AudioManager
     @ObservedObject var hotkeyManager: HotkeyManager
     @ObservedObject var transcriptionManager: TranscriptionManager
-    @StateObject private var coordinator: RecordingCoordinator
+    @ObservedObject var coordinator: RecordingCoordinator
     @State private var apiKey: String = UserDefaults.standard.string(forKey: "OpenAIAPIKey") ?? ""
     
-    init(audioManager: AudioManager, hotkeyManager: HotkeyManager, transcriptionManager: TranscriptionManager) {
+    init(audioManager: AudioManager, hotkeyManager: HotkeyManager, transcriptionManager: TranscriptionManager, coordinator: RecordingCoordinator) {
         self.audioManager = audioManager
         self.hotkeyManager = hotkeyManager
         self.transcriptionManager = transcriptionManager
-        self._coordinator = StateObject(wrappedValue: RecordingCoordinator(audioManager: audioManager, transcriptionManager: transcriptionManager))
+        self.coordinator = coordinator
     }
     
     var body: some View {
