@@ -56,6 +56,10 @@ struct WhisperDictateApp: App {
             if audioManager.isRecording {
                 Image(systemName: "record.circle.fill")
                     .symbolRenderingMode(.multicolor)
+            } else if transcriptionManager.isTranscribing {
+                Image(systemName: "arrow.triangle.2.circlepath.circle")
+                    .symbolRenderingMode(.multicolor)
+                    .foregroundStyle(.yellow)
             } else {
                 Image(systemName: "mic.circle")
             }
