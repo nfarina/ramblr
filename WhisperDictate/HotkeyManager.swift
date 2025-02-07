@@ -1,22 +1,15 @@
 import Foundation
-import Carbon
 import Cocoa
 
 class HotkeyManager: ObservableObject {
-    private var eventHandler: EventHandlerRef?
-    private var hotKeyRef: EventHotKeyRef?
-    private var runLoopSource: CFRunLoopSource?
-    var callback: (() -> Void)?
+    private var lastOptionKeyPress: Date?
+    private let doublePressInterval: TimeInterval = 0.3 // 300ms window for double press
+    private var isOptionKeyDown = false
+    private var localMonitor: Any?
+    private var globalMonitor: Any?
     
     init() {
-        // Ensure we're running on the main thread
-        if !Thread.isMainThread {
-            DispatchQueue.main.sync {
-                setupEventHandler()
-            }
-        } else {
-            setupEventHandler()
-        }
+        setupEventHandling()
         
         // Register for workspace notifications to handle sleep/wake
         NSWorkspace.shared.notificationCenter.addObserver(
@@ -27,119 +20,78 @@ class HotkeyManager: ObservableObject {
         )
     }
     
-    private func setupEventHandler() {
-        print("HotkeyManager: Setting up event handler")
+    private func setupEventHandling() {
+        // Clean up any existing monitors
+        cleanupMonitors()
         
-        // Clean up existing handlers
-        cleanupHotkey()
-        
-        // Create a run loop source for Carbon events
-        var context = CFRunLoopSourceContext()
-        context.info = Unmanaged.passUnretained(self).toOpaque()
-        
-        if let source = CFRunLoopSourceCreate(kCFAllocatorDefault, 0, &context) {
-            runLoopSource = source
-            CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
+        // Set up local monitor for modifier keys
+        localMonitor = NSEvent.addLocalMonitorForEvents(matching: [.flagsChanged]) { [weak self] event in
+            self?.handleEvent(event)
+            return event
         }
         
-        // Register for Carbon events
-        var eventType = EventTypeSpec()
-        eventType.eventClass = UInt32(kEventClassKeyboard)
-        eventType.eventKind = UInt32(kEventHotKeyPressed)
-        
-        // Install handler
-        let status = InstallEventHandler(
-            GetEventMonitorTarget(), // Use monitor target instead of application target
-            { (_, inEvent, _) -> OSStatus in
-                var hotKeyID = EventHotKeyID()
-                GetEventParameter(inEvent,
-                                UInt32(kEventParamDirectObject),
-                                UInt32(typeEventHotKeyID),
-                                nil,
-                                MemoryLayout<EventHotKeyID>.size,
-                                nil,
-                                &hotKeyID)
+        // Set up global monitor for all keys
+        globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.flagsChanged]) { [weak self] event in
+            self?.handleEvent(event)
+        }
+    }
+    
+    private func handleEvent(_ event: NSEvent) {
+        // Right option key has keyCode 61
+        if event.keyCode == 61 {
+            if event.type == .flagsChanged {
+                // Check if the right option key was just pressed or released
+                let isPressed = event.modifierFlags.contains(.option)
                 
-                if hotKeyID.id == 1 {
-                    DispatchQueue.main.async {
-                        print("HotkeyManager: Hotkey pressed!")
-                        NotificationCenter.default.post(name: NSNotification.Name("HotkeyPressed"), object: nil)
-                    }
+                if isPressed && !isOptionKeyDown {
+                    // Option key was just pressed
+                    isOptionKeyDown = true
+                    handleOptionKeyPress()
+                } else if !isPressed && isOptionKeyDown {
+                    // Option key was just released
+                    isOptionKeyDown = false
                 }
-                return noErr
-            },
-            1,
-            &eventType,
-            nil,
-            &eventHandler
-        )
-        
-        if status != noErr {
-            print("HotkeyManager: Failed to install event handler: \(status)")
-            return
-        }
-        
-        // Register the hotkey
-        setupHotkey()
-    }
-    
-    private func setupHotkey() {
-        print("HotkeyManager: Registering hotkey")
-        
-        var gMyHotKeyID = EventHotKeyID()
-        
-        // Convert four-char code to OSType using Unicode scalars
-        let fourCharCode = "htk1"
-        let scalars = fourCharCode.unicodeScalars
-        let signature = (UInt32(scalars[scalars.startIndex].value) << 24) |
-                       (UInt32(scalars[scalars.index(after: scalars.startIndex)].value) << 16) |
-                       (UInt32(scalars[scalars.index(scalars.startIndex, offsetBy: 2)].value) << 8) |
-                       UInt32(scalars[scalars.index(scalars.startIndex, offsetBy: 3)].value)
-        
-        gMyHotKeyID.signature = FourCharCode(signature)
-        gMyHotKeyID.id = UInt32(1)
-        
-        // Register hotkey (CMD + CTRL + R)
-        let registerStatus = RegisterEventHotKey(
-            UInt32(kVK_ANSI_R),
-            UInt32(cmdKey | controlKey),
-            gMyHotKeyID,
-            GetEventMonitorTarget(), // Use monitor target instead of application target
-            0,
-            &hotKeyRef
-        )
-        
-        if registerStatus != noErr {
-            print("HotkeyManager: Failed to register hotkey: \(registerStatus)")
-        } else {
-            print("HotkeyManager: Successfully registered hotkey")
+            }
         }
     }
     
-    private func cleanupHotkey() {
-        if let hotKeyRef = hotKeyRef {
-            UnregisterEventHotKey(hotKeyRef)
-            self.hotKeyRef = nil
+    private func handleOptionKeyPress() {
+        let now = Date()
+        
+        if let lastPress = lastOptionKeyPress {
+            let timeSinceLastPress = now.timeIntervalSince(lastPress)
+            
+            if timeSinceLastPress <= doublePressInterval {
+                // Double press detected!
+                print("HotkeyManager: Double press detected")
+                DispatchQueue.main.async {
+                    NotificationCenter.default.post(name: NSNotification.Name("HotkeyPressed"), object: nil)
+                }
+                lastOptionKeyPress = nil // Reset to prevent triple-press detection
+                return
+            }
         }
         
-        if let eventHandler = eventHandler {
-            RemoveEventHandler(eventHandler)
-            self.eventHandler = nil
+        lastOptionKeyPress = now
+    }
+    
+    private func cleanupMonitors() {
+        if let monitor = localMonitor {
+            NSEvent.removeMonitor(monitor)
+            localMonitor = nil
         }
-        
-        if let source = runLoopSource {
-            CFRunLoopRemoveSource(CFRunLoopGetMain(), source, .commonModes)
-            runLoopSource = nil
+        if let monitor = globalMonitor {
+            NSEvent.removeMonitor(monitor)
+            globalMonitor = nil
         }
     }
     
     @objc private func handleWake() {
-        print("HotkeyManager: System woke from sleep, reinitializing")
-        setupEventHandler()
+        setupEventHandling()
     }
     
     deinit {
-        cleanupHotkey()
+        cleanupMonitors()
         NSWorkspace.shared.notificationCenter.removeObserver(self)
     }
 }

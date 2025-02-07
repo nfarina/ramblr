@@ -107,7 +107,7 @@ class TranscriptionManager: ObservableObject {
         
         var error: NSDictionary?
         if let scriptObject = NSAppleScript(source: script) {
-            let output = scriptObject.executeAndReturnError(&error)
+            scriptObject.executeAndReturnError(&error)
             if let error = error {
                 print("AppleScript error:", error)
                 // If we get an error, recheck permissions as they might have been revoked
