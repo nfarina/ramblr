@@ -16,8 +16,8 @@ class AudioManager: NSObject, ObservableObject {
     private var totalSamples: Int = 0
     private var silentSamples: Int = 0
     private let silenceThreshold: Float = 0.01 // Adjust this to change sensitivity
-    private let minimumDuration: TimeInterval = 1.0 // Minimum recording duration in seconds
-    private let maximumSilencePercentage: Float = 1.0 // Maximum percentage of silence allowed
+    private let minimumDuration: TimeInterval = 2.7 // Minimum recording duration in seconds
+    private let maximumSilencePercentage: Float = 0.95 // Maximum percentage of silence allowed
     
     override init() {
         super.init()
@@ -170,12 +170,18 @@ class AudioManager: NSObject, ObservableObject {
             print("Recording too short: \(duration) seconds")
             return false
         }
+        else {
+            print("Recording duration: \(duration) seconds")
+        }
         
         // Check silence percentage
         let silencePercentage = Float(silentSamples) / Float(totalSamples)
         if silencePercentage > maximumSilencePercentage {
             print("Too much silence: \(silencePercentage * 100)%")
             return false
+        }
+        else {
+            print("Silence percentage: \(silencePercentage * 100)%")
         }
         
         return true

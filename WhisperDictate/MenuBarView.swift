@@ -66,7 +66,7 @@ struct MenuBarView: View {
                 .padding(.bottom, 5)
             }
             
-            Text("Double-press Right Option key to start/stop recording")
+            Text("Press Option+D to start/stop recording")
                 .font(.caption)
                 .foregroundColor(.secondary)
             
