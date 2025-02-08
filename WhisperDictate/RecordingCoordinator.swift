@@ -55,8 +55,8 @@ class RecordingCoordinator: ObservableObject {
                     showRecordingError()
                 }
             } else {
-                print("RecordingCoordinator: No recording URL returned")
-                showRecordingError()
+                // Don't show an error - this is likely an intentionally short or silent recording
+                print("RecordingCoordinator: Recording was too short or silent")
             }
         } else {
             print("RecordingCoordinator: Starting recording...")

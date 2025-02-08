@@ -12,6 +12,13 @@ class AudioManager: NSObject, ObservableObject {
     private var volumeMeter: AVAudioMixerNode?
     private let audioQueue = DispatchQueue(label: "com.nfarina.WhisperDictate.audio")
     
+    // Audio analysis parameters
+    private var totalSamples: Int = 0
+    private var silentSamples: Int = 0
+    private let silenceThreshold: Float = 0.01 // Adjust this to change sensitivity
+    private let minimumDuration: TimeInterval = 1.0 // Minimum recording duration in seconds
+    private let maximumSilencePercentage: Float = 1.0 // Maximum percentage of silence allowed
+    
     override init() {
         super.init()
         setupRecordingURL()
@@ -88,6 +95,9 @@ class AudioManager: NSObject, ObservableObject {
                       let recordingURL = self.recordingURL,
                       self.isRecording else { return }
                 
+                // Analyze audio buffer for silence
+                self.analyzeSilence(buffer)
+                
                 var convertedBuffer: AVAudioPCMBuffer?
                 
                 if self.converter == nil && inputFormat != whisperFormat {
@@ -140,6 +150,37 @@ class AudioManager: NSObject, ObservableObject {
         }
     }
     
+    private func analyzeSilence(_ buffer: AVAudioPCMBuffer) {
+        guard let channelData = buffer.floatChannelData?[0] else { return }
+        let frameLength = Int(buffer.frameLength)
+        
+        // Count samples below threshold
+        for i in 0..<frameLength {
+            totalSamples += 1
+            if abs(channelData[i]) < silenceThreshold {
+                silentSamples += 1
+            }
+        }
+    }
+    
+    private func isRecordingValid() -> Bool {
+        // Check minimum duration (16000 samples per second for our format)
+        let duration = TimeInterval(totalSamples) / 16000
+        if duration < minimumDuration {
+            print("Recording too short: \(duration) seconds")
+            return false
+        }
+        
+        // Check silence percentage
+        let silencePercentage = Float(silentSamples) / Float(totalSamples)
+        if silencePercentage > maximumSilencePercentage {
+            print("Too much silence: \(silencePercentage * 100)%")
+            return false
+        }
+        
+        return true
+    }
+    
     private func cleanupAudioEngine() {
         print("AudioManager: Cleaning up audio engine")
         audioEngine?.stop()
@@ -155,6 +196,10 @@ class AudioManager: NSObject, ObservableObject {
         print("AudioManager: Starting recording")
         audioQueue.async { [weak self] in
             guard let self = self else { return }
+            
+            // Reset audio analysis
+            self.totalSamples = 0
+            self.silentSamples = 0
             
             // Make sure we have a fresh audio engine setup
             DispatchQueue.main.sync {
@@ -211,6 +256,12 @@ class AudioManager: NSObject, ObservableObject {
         NotificationCenter.default.post(name: NSNotification.Name("RecordingStatusChanged"),
                                      object: nil,
                                      userInfo: ["isRecording": false])
+        
+        // Check if the recording is valid
+        if !isRecordingValid() {
+            try? FileManager.default.removeItem(at: recordingURL)
+            return nil
+        }
         
         // Verify the file exists before returning
         if FileManager.default.fileExists(atPath: recordingURL.path) {
