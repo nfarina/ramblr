@@ -72,19 +72,54 @@ class TranscriptionManager: ObservableObject {
                 self?.isTranscribing = false
                 
                 if let error = error {
-                    print("Transcription error: \(error.localizedDescription)")
+                    print("Transcription network error: \(error.localizedDescription)")
+                    print("Underlying error: \(error)")
                     completion(nil)
                     return
                 }
                 
-                guard let data = data,
-                      let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                      let text = json["text"] as? String else {
+                if let httpResponse = response as? HTTPURLResponse {
+                    print("Transcription API response status: \(httpResponse.statusCode)")
+                    if httpResponse.statusCode != 200 {
+                        print("Transcription API error: Non-200 status code")
+                        if let data = data, let errorJson = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                            print("API error response: \(errorJson)")
+                        }
+                        completion(nil)
+                        return
+                    }
+                }
+                
+                guard let data = data else {
+                    print("Transcription error: No data received from API")
                     completion(nil)
                     return
                 }
                 
-                completion(text)
+                do {
+                    if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                        if let text = json["text"] as? String {
+                            print("Transcription successful, received text of length: \(text.count)")
+                            completion(text)
+                        } else {
+                            print("Transcription error: Response missing 'text' field")
+                            print("Full API response: \(json)")
+                            completion(nil)
+                        }
+                    } else {
+                        print("Transcription error: Invalid JSON response")
+                        if let responseString = String(data: data, encoding: .utf8) {
+                            print("Raw API response: \(responseString)")
+                        }
+                        completion(nil)
+                    }
+                } catch {
+                    print("Transcription JSON parsing error: \(error)")
+                    if let responseString = String(data: data, encoding: .utf8) {
+                        print("Raw API response: \(responseString)")
+                    }
+                    completion(nil)
+                }
             }
         }.resume()
     }

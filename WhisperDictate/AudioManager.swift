@@ -15,9 +15,12 @@ class AudioManager: NSObject, ObservableObject {
     // Audio analysis parameters
     private var totalSamples: Int = 0
     private var silentSamples: Int = 0
+    
+    // This was a good idea but introduces the possibility of dropping a recording you want which is not acceptable,
+    // so I've nerfed all the values.
     private let silenceThreshold: Float = 0.01 // Adjust this to change sensitivity
-    private let minimumDuration: TimeInterval = 2.7 // Minimum recording duration in seconds
-    private let maximumSilencePercentage: Float = 0.95 // Maximum percentage of silence allowed
+    private let minimumDuration: TimeInterval = 0.0 // Minimum recording duration in seconds
+    private let maximumSilencePercentage: Float = 1.0 // Maximum percentage of silence allowed
     
     override init() {
         super.init()
