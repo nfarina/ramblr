@@ -4,6 +4,7 @@ class RecordingCoordinator: ObservableObject {
     private var audioManager: AudioManager
     private var transcriptionManager: TranscriptionManager
     private var notificationObserver: NSObjectProtocol?
+    private var lastRecordingURL: URL? // Store the last recording URL for retry
     
     init(audioManager: AudioManager, transcriptionManager: TranscriptionManager) {
         print("RecordingCoordinator: Initializing")
@@ -28,24 +29,13 @@ class RecordingCoordinator: ObservableObject {
             print("RecordingCoordinator: Stopping recording...")
             if let recordingURL = audioManager.stopRecording() {
                 print("RecordingCoordinator: Got recording URL: \(recordingURL)")
+                self.lastRecordingURL = recordingURL // Save for potential retry
                 
                 // Verify the file exists and has data
                 if let fileSize = try? FileManager.default.attributesOfItem(atPath: recordingURL.path)[.size] as? Int64 {
                     print("RecordingCoordinator: Recording file size: \(fileSize) bytes")
                     if fileSize > 0 {
-                        transcriptionManager.transcribe(audioURL: recordingURL) { [weak self] text in
-                            guard let self = self else { return }
-                            
-                            if let text = text {
-                                print("RecordingCoordinator: Received transcription: \(text)")
-                                self.transcriptionManager.pasteText(text)
-                            } else {
-                                print("RecordingCoordinator: Transcription failed or returned nil")
-                                DispatchQueue.main.async {
-                                    self.showTranscriptionError()
-                                }
-                            }
-                        }
+                        transcribeAudio(recordingURL: recordingURL)
                     } else {
                         print("RecordingCoordinator: Recording file is empty")
                         showRecordingError()
@@ -64,6 +54,22 @@ class RecordingCoordinator: ObservableObject {
         }
     }
     
+    private func transcribeAudio(recordingURL: URL) {
+        transcriptionManager.transcribe(audioURL: recordingURL) { [weak self] text in
+            guard let self = self else { return }
+            
+            if let text = text {
+                print("RecordingCoordinator: Received transcription: \(text)")
+                self.transcriptionManager.pasteText(text)
+            } else {
+                print("RecordingCoordinator: Transcription failed or returned nil")
+                DispatchQueue.main.async {
+                    self.showTranscriptionErrorWithOptions(recordingURL: recordingURL)
+                }
+            }
+        }
+    }
+    
     private func showRecordingError() {
         DispatchQueue.main.async {
             let alert = NSAlert()
@@ -75,13 +81,36 @@ class RecordingCoordinator: ObservableObject {
         }
     }
     
-    private func showTranscriptionError() {
+    private func showTranscriptionErrorWithOptions(recordingURL: URL) {
         let alert = NSAlert()
         alert.messageText = "Transcription Error"
         alert.informativeText = "Failed to transcribe audio. Please check your API key and internet connection."
         alert.alertStyle = .warning
-        alert.addButton(withTitle: "OK")
-        alert.runModal()
+        alert.addButton(withTitle: "Retry") // First button (return code: 1000)
+        alert.addButton(withTitle: "Show in Finder") // Second button (return code: 1001)
+        alert.addButton(withTitle: "Cancel") // Third button (return code: 1002)
+        
+        let response = alert.runModal()
+        
+        switch response {
+        case .alertFirstButtonReturn: // Retry
+            print("RecordingCoordinator: Retrying transcription")
+            transcribeAudio(recordingURL: recordingURL)
+            
+        case .alertSecondButtonReturn: // Show in Finder
+            print("RecordingCoordinator: Showing in Finder: \(recordingURL)")
+            NSWorkspace.shared.selectFile(recordingURL.path, inFileViewerRootedAtPath: "")
+            
+        default: // Cancel
+            print("RecordingCoordinator: Transcription error dismissed")
+        }
+    }
+    
+    // Function to retry the last transcription from outside this class if needed
+    func retryLastTranscription() {
+        if let lastURL = lastRecordingURL {
+            transcribeAudio(recordingURL: lastURL)
+        }
     }
     
     deinit {
