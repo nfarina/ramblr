@@ -10,10 +10,15 @@ import Cocoa
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
+        logInfo("Application did finish launching")
         // Just ensure we're not active
         if NSApp.isActive {
             NSApp.deactivate()
         }
+    }
+    
+    func applicationWillTerminate(_ notification: Notification) {
+        logInfo("Application will terminate")
     }
 }
 
@@ -25,8 +30,11 @@ struct WhisperDictateApp: App {
     @StateObject private var coordinator: RecordingCoordinator
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     
+    // Initialize Logger early
+    private let logger = Logger.shared
+    
     init() {
-        print("WhisperDictateApp: Initializing")
+        logInfo("WhisperDictateApp: Initializing")
         
         // Create managers first
         let audio = AudioManager()
@@ -44,6 +52,11 @@ struct WhisperDictateApp: App {
         _hotkeyManager = StateObject(wrappedValue: hotkey)
         _transcriptionManager = StateObject(wrappedValue: transcription)
         _coordinator = StateObject(wrappedValue: coordinator)
+        
+        // Log system info
+        let osVersion = ProcessInfo.processInfo.operatingSystemVersionString
+        let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown"
+        logInfo("System: \(osVersion), App Version: \(appVersion)")
     }
     
     var body: some Scene {

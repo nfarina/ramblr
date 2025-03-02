@@ -60,7 +60,7 @@ class AudioManager: NSObject, ObservableObject {
     }
     
     private func setupAudioEngine() {
-        print("AudioManager: Setting up audio engine")
+        logInfo("AudioManager: Setting up audio engine")
         
         // Clean up existing engine if any
         cleanupAudioEngine()
@@ -70,7 +70,7 @@ class AudioManager: NSObject, ObservableObject {
         
         inputNode = audioEngine.inputNode
         guard let inputNode = inputNode else {
-            print("AudioManager: Failed to get input node")
+            logError("AudioManager: Failed to get input node")
             return
         }
         
@@ -85,8 +85,8 @@ class AudioManager: NSObject, ObservableObject {
                                         channels: 1,
                                         interleaved: false)!
         
-        print("AudioManager: Input format: \(inputFormat)")
-        print("AudioManager: Whisper format: \(whisperFormat)")
+        logDebug("AudioManager: Input format: \(inputFormat)")
+        logDebug("AudioManager: Whisper format: \(whisperFormat)")
         
         volumeMeter.volume = 1.0
         audioEngine.connect(inputNode, to: volumeMeter, format: inputFormat)
@@ -124,7 +124,7 @@ class AudioManager: NSObject, ObservableObject {
                                     withInputFrom: inputBlock)
                     
                     if error != nil {
-                        print("AudioManager: Conversion error: \(error!)")
+                        logError("AudioManager: Conversion error: \(error!)")
                         return
                     }
                 } else {
@@ -137,9 +137,9 @@ class AudioManager: NSObject, ObservableObject {
                     do {
                         self.audioFile = try AVAudioFile(forWriting: recordingURL,
                                                         settings: whisperFormat.settings)
-                        print("AudioManager: Created new audio file at \(recordingURL)")
+                        logInfo("AudioManager: Created new audio file at \(recordingURL)")
                     } catch {
-                        print("AudioManager: Failed to create audio file: \(error)")
+                        logError("AudioManager: Failed to create audio file: \(error)")
                         return
                     }
                 }
@@ -147,7 +147,7 @@ class AudioManager: NSObject, ObservableObject {
                 do {
                     try self.audioFile?.write(from: finalBuffer)
                 } catch {
-                    print("AudioManager: Failed to write buffer: \(error)")
+                    logError("AudioManager: Failed to write buffer: \(error)")
                 }
             }
         }
@@ -170,28 +170,28 @@ class AudioManager: NSObject, ObservableObject {
         // Check minimum duration (16000 samples per second for our format)
         let duration = TimeInterval(totalSamples) / 16000
         if duration < minimumDuration {
-            print("Recording too short: \(duration) seconds")
+            logInfo("Recording too short: \(duration) seconds")
             return false
         }
         else {
-            print("Recording duration: \(duration) seconds")
+            logInfo("Recording duration: \(duration) seconds")
         }
         
         // Check silence percentage
         let silencePercentage = Float(silentSamples) / Float(totalSamples)
         if silencePercentage > maximumSilencePercentage {
-            print("Too much silence: \(silencePercentage * 100)%")
+            logInfo("Too much silence: \(silencePercentage * 100)%")
             return false
         }
         else {
-            print("Silence percentage: \(silencePercentage * 100)%")
+            logInfo("Silence percentage: \(silencePercentage * 100)%")
         }
         
         return true
     }
     
     private func cleanupAudioEngine() {
-        print("AudioManager: Cleaning up audio engine")
+        logInfo("AudioManager: Cleaning up audio engine")
         audioEngine?.stop()
         volumeMeter?.removeTap(onBus: 0)
         audioEngine = nil
@@ -202,7 +202,7 @@ class AudioManager: NSObject, ObservableObject {
     }
     
     func startRecording() {
-        print("AudioManager: Starting recording")
+        logInfo("AudioManager: Starting recording")
         audioQueue.async { [weak self] in
             guard let self = self else { return }
             
@@ -216,7 +216,7 @@ class AudioManager: NSObject, ObservableObject {
             }
             
             guard let audioEngine = self.audioEngine else {
-                print("AudioManager: No audio engine available")
+                logError("AudioManager: No audio engine available")
                 return
             }
             
@@ -231,17 +231,17 @@ class AudioManager: NSObject, ObservableObject {
                                                  object: nil,
                                                  userInfo: ["isRecording": true])
                 }
-                print("AudioManager: Recording started successfully")
+                logInfo("AudioManager: Recording started successfully")
             } catch {
-                print("AudioManager: Failed to start recording: \(error.localizedDescription)")
+                logError("AudioManager: Failed to start recording: \(error.localizedDescription)")
             }
         }
     }
     
     func stopRecording() -> URL? {
-        print("AudioManager: Stopping recording")
+        logInfo("AudioManager: Stopping recording")
         guard let recordingURL = recordingURL else {
-            print("AudioManager: No recording URL available")
+            logError("AudioManager: No recording URL available")
             return nil
         }
         
@@ -250,7 +250,7 @@ class AudioManager: NSObject, ObservableObject {
         
         // Synchronously stop audio processing and close file
         audioQueue.sync { [weak self] in
-            print("AudioManager: Stopping audio engine and cleaning up")
+            logInfo("AudioManager: Stopping audio engine and cleaning up")
             self?.audioEngine?.stop()
             self?.volumeMeter?.removeTap(onBus: 0)
             // Close the audio file explicitly
@@ -274,10 +274,10 @@ class AudioManager: NSObject, ObservableObject {
         
         // Verify the file exists before returning
         if FileManager.default.fileExists(atPath: recordingURL.path) {
-            print("AudioManager: Recording saved successfully at \(recordingURL)")
+            logInfo("AudioManager: Recording saved successfully at \(recordingURL)")
             return recordingURL
         }
-        print("AudioManager: Recording file not found at \(recordingURL)")
+        logError("AudioManager: Recording file not found at \(recordingURL)")
         return nil
     }
 }

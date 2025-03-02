@@ -50,6 +50,7 @@ struct MenuBarView: View {
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                     .onChange(of: apiKey) { newValue in
                         transcriptionManager.setAPIKey(newValue)
+                        logInfo("API Key updated")
                     }
             }
             .padding(.vertical, 5)
@@ -61,6 +62,7 @@ struct MenuBarView: View {
                 Button("Open System Settings") {
                     if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
                         NSWorkspace.shared.open(url)
+                        logInfo("Opening Accessibility settings")
                     }
                 }
                 .padding(.bottom, 5)
@@ -72,10 +74,25 @@ struct MenuBarView: View {
             
             Divider()
             
-            Button(action: {
-                NSApplication.shared.terminate(nil)
-            }) {
-                Text("Quit")
+            HStack {
+                Button(action: {
+                    logInfo("Viewing application logs")
+                    Logger.shared.openLogFile()
+                }) {
+                    HStack {
+                        Image(systemName: "doc.text.magnifyingglass")
+                        Text("View Logs")
+                    }
+                }
+                
+                Spacer()
+                
+                Button(action: {
+                    logInfo("User initiated app quit")
+                    NSApplication.shared.terminate(nil)
+                }) {
+                    Text("Quit")
+                }
             }
         }
         .padding()

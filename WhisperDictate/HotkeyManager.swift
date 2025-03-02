@@ -7,6 +7,7 @@ class HotkeyManager: ObservableObject {
     private var hotKeyRef: EventHotKeyRef?
     
     init() {
+        logInfo("HotkeyManager: Initializing")
         setupHotkey()
         
         // Register for workspace notifications to handle sleep/wake
@@ -54,7 +55,7 @@ class HotkeyManager: ObservableObject {
                 
                 if hotKeyID.id == 1 {
                     DispatchQueue.main.async {
-                        print("HotkeyManager: Hotkey pressed")
+                        logDebug("HotkeyManager: Hotkey pressed")
                         NotificationCenter.default.post(name: NSNotification.Name("HotkeyPressed"), object: nil)
                     }
                 }
@@ -67,7 +68,7 @@ class HotkeyManager: ObservableObject {
         )
         
         if status != noErr {
-            print("HotkeyManager: Failed to install event handler")
+            logError("HotkeyManager: Failed to install event handler")
             return
         }
         
@@ -82,11 +83,14 @@ class HotkeyManager: ObservableObject {
         )
         
         if registerStatus != noErr {
-            print("HotkeyManager: Failed to register hotkey")
+            logError("HotkeyManager: Failed to register hotkey")
+        } else {
+            logInfo("HotkeyManager: Successfully registered Option+D hotkey")
         }
     }
     
     private func cleanupHotkey() {
+        logDebug("HotkeyManager: Cleaning up hotkey resources")
         if let hotKeyRef = hotKeyRef {
             UnregisterEventHotKey(hotKeyRef)
             self.hotKeyRef = nil
@@ -99,10 +103,12 @@ class HotkeyManager: ObservableObject {
     }
     
     @objc private func handleWake() {
+        logInfo("HotkeyManager: System woke from sleep, reinstalling hotkey")
         setupHotkey()
     }
     
     deinit {
+        logInfo("HotkeyManager: Deinitializing")
         cleanupHotkey()
         NSWorkspace.shared.notificationCenter.removeObserver(self)
     }

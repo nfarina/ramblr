@@ -34,6 +34,7 @@ class TranscriptionManager: ObservableObject {
     
     func transcribe(audioURL: URL, completion: @escaping (String?) -> Void) {
         guard let apiKey = apiKey else {
+            logError("Transcription error: No API key provided")
             completion(nil)
             return
         }
@@ -54,7 +55,21 @@ class TranscriptionManager: ObservableObject {
         data.append("--\(boundary)\r\n".data(using: .utf8)!)
         data.append("Content-Disposition: form-data; name=\"file\"; filename=\"recording.wav\"\r\n".data(using: .utf8)!)
         data.append("Content-Type: audio/wav\r\n\r\n".data(using: .utf8)!)
-        data.append(try! Data(contentsOf: audioURL))
+        
+        do {
+            let audioData = try Data(contentsOf: audioURL)
+            let audioFileSize = audioData.count
+            logInfo("Audio file size being sent to API: \(audioFileSize) bytes")
+            data.append(audioData)
+        } catch {
+            logError("Error reading audio file: \(error)")
+            DispatchQueue.main.async {
+                self.isTranscribing = false
+                completion(nil)
+            }
+            return
+        }
+        
         data.append("\r\n".data(using: .utf8)!)
         
         // Add model parameter
@@ -72,26 +87,33 @@ class TranscriptionManager: ObservableObject {
                 self?.isTranscribing = false
                 
                 if let error = error {
-                    print("Transcription network error: \(error.localizedDescription)")
-                    print("Underlying error: \(error)")
+                    logError("Transcription network error: \(error.localizedDescription)")
+                    logError("Underlying error: \(error)")
                     completion(nil)
                     return
                 }
                 
                 if let httpResponse = response as? HTTPURLResponse {
-                    print("Transcription API response status: \(httpResponse.statusCode)")
+                    logInfo("Transcription API response status: \(httpResponse.statusCode)")
+                    
                     if httpResponse.statusCode != 200 {
-                        print("Transcription API error: Non-200 status code")
+                        logError("Transcription API error: Non-200 status code (\(httpResponse.statusCode))")
+                        
                         if let data = data, let errorJson = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                            print("API error response: \(errorJson)")
+                            logError("API error response: \(errorJson)")
+                            if let errorObj = errorJson["error"] as? [String: Any], 
+                               let message = errorObj["message"] as? String {
+                                logError("Error message: \(message)")
+                            }
                         }
+                        
                         completion(nil)
                         return
                     }
                 }
                 
                 guard let data = data else {
-                    print("Transcription error: No data received from API")
+                    logError("Transcription error: No data received from API")
                     completion(nil)
                     return
                 }
@@ -99,25 +121,29 @@ class TranscriptionManager: ObservableObject {
                 do {
                     if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
                         if let text = json["text"] as? String {
-                            print("Transcription successful, received text of length: \(text.count)")
+                            logInfo("Transcription successful, received text of length: \(text.count)")
                             completion(text)
                         } else {
-                            print("Transcription error: Response missing 'text' field")
-                            print("Full API response: \(json)")
+                            logError("Transcription error: Response missing 'text' field")
+                            logError("Full API response: \(json)")
                             completion(nil)
                         }
                     } else {
-                        print("Transcription error: Invalid JSON response")
+                        logError("Transcription error: Invalid JSON response")
+                        
                         if let responseString = String(data: data, encoding: .utf8) {
-                            print("Raw API response: \(responseString)")
+                            logError("Raw API response: \(responseString)")
                         }
+                        
                         completion(nil)
                     }
                 } catch {
-                    print("Transcription JSON parsing error: \(error)")
+                    logError("Transcription JSON parsing error: \(error)")
+                    
                     if let responseString = String(data: data, encoding: .utf8) {
-                        print("Raw API response: \(responseString)")
+                        logError("Raw API response: \(responseString)")
                     }
+                    
                     completion(nil)
                 }
             }
@@ -125,11 +151,11 @@ class TranscriptionManager: ObservableObject {
     }
     
     func pasteText(_ text: String) {
-        print("Starting pasteText...")
+        logInfo("Starting text paste operation")
         
         // First check if we have accessibility permission
         if !AXIsProcessTrusted() {
-            print("No accessibility permission")
+            logError("No accessibility permission")
             showAccessibilityAlert()
             return
         }
@@ -144,11 +170,11 @@ class TranscriptionManager: ObservableObject {
         if let scriptObject = NSAppleScript(source: script) {
             scriptObject.executeAndReturnError(&error)
             if let error = error {
-                print("AppleScript error:", error)
+                logError("AppleScript error: \(error)")
                 // If we get an error, recheck permissions as they might have been revoked
                 checkAccessibilityPermission()
             } else {
-                print("Successfully typed text")
+                logInfo("Successfully typed text")
             }
         }
     }
