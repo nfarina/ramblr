@@ -48,7 +48,7 @@ struct MenuBarView: View {
                 Text("OpenAI API Key:")
                 SecureField("Enter API Key", text: $apiKey)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .onChange(of: apiKey) { newValue in
+                    .onChange(of: apiKey) { oldValue, newValue in
                         transcriptionManager.setAPIKey(newValue)
                         logInfo("API Key updated")
                     }
