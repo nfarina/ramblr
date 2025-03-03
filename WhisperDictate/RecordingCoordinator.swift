@@ -6,10 +6,23 @@ class RecordingCoordinator: ObservableObject {
     private var notificationObserver: NSObjectProtocol?
     private var lastRecordingURL: URL? // Store the last recording URL for retry
     
+    @Published var transcriptionStatus: String = ""
+    
     init(audioManager: AudioManager, transcriptionManager: TranscriptionManager) {
         logInfo("RecordingCoordinator: Initializing")
         self.audioManager = audioManager
         self.transcriptionManager = transcriptionManager
+        
+        // Connect TranscriptionManager to AudioManager for network stress reporting
+        self.transcriptionManager.setAudioManager(audioManager)
+        
+        // Observe status message updates
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(updateTranscriptionStatus),
+            name: NSNotification.Name("TranscriptionStatusChanged"),
+            object: nil
+        )
         
         // Store the observer so it doesn't get deallocated
         self.notificationObserver = NotificationCenter.default.addObserver(
@@ -19,6 +32,14 @@ class RecordingCoordinator: ObservableObject {
         ) { [weak self] _ in
             logDebug("RecordingCoordinator: Received hotkey notification")
             self?.toggleRecording()
+        }
+    }
+    
+    @objc private func updateTranscriptionStatus(_ notification: Notification) {
+        if let status = notification.userInfo?["status"] as? String {
+            DispatchQueue.main.async {
+                self.transcriptionStatus = status
+            }
         }
     }
     
@@ -62,7 +83,9 @@ class RecordingCoordinator: ObservableObject {
     
     private func transcribeAudio(recordingURL: URL) {
         logInfo("Beginning transcription for file: \(recordingURL.lastPathComponent)")
-        transcriptionManager.transcribe(audioURL: recordingURL) { [weak self] text in
+        
+        // Use the new transcribeWithRetry method
+        transcriptionManager.transcribeWithRetry(audioURL: recordingURL) { [weak self] text in
             guard let self = self else { return }
             
             if let text = text {
@@ -70,7 +93,7 @@ class RecordingCoordinator: ObservableObject {
                 logInfo("Transcription successful: \(text.prefix(50))...")
                 self.transcriptionManager.pasteText(text)
             } else {
-                logError("RecordingCoordinator: Transcription failed or returned nil")
+                logError("RecordingCoordinator: Transcription failed after retries")
                 DispatchQueue.main.async {
                     self.showTranscriptionErrorWithOptions(recordingURL: recordingURL)
                 }
@@ -92,32 +115,34 @@ class RecordingCoordinator: ObservableObject {
     private func showTranscriptionErrorWithOptions(recordingURL: URL) {
         logInfo("Showing transcription error dialog with options")
         
-        let alert = NSAlert()
-        alert.messageText = "Transcription Error"
-        alert.informativeText = "Failed to transcribe audio. Please check your API key and internet connection."
-        alert.alertStyle = .warning
-        alert.addButton(withTitle: "Retry") // First button (return code: 1000)
-        alert.addButton(withTitle: "Show in Finder") // Second button (return code: 1001)
-        alert.addButton(withTitle: "View Logs") // Added third button
-        alert.addButton(withTitle: "Cancel") // Fourth button (return code: 1003)
-        
-        let response = alert.runModal()
-        
-        switch response {
-        case .alertFirstButtonReturn: // Retry
-            logInfo("RecordingCoordinator: Retrying transcription")
-            transcribeAudio(recordingURL: recordingURL)
+        DispatchQueue.main.async {
+            let alert = NSAlert()
+            alert.messageText = "Transcription Error"
+            alert.informativeText = "Failed to transcribe audio after multiple attempts. Please check your API key and internet connection."
+            alert.alertStyle = .warning
+            alert.addButton(withTitle: "Retry") // First button (return code: 1000)
+            alert.addButton(withTitle: "Show in Finder") // Second button (return code: 1001)
+            alert.addButton(withTitle: "View Logs") // Added third button
+            alert.addButton(withTitle: "Cancel") // Fourth button (return code: 1003)
             
-        case .alertSecondButtonReturn: // Show in Finder
-            logInfo("RecordingCoordinator: Showing in Finder: \(recordingURL)")
-            NSWorkspace.shared.selectFile(recordingURL.path, inFileViewerRootedAtPath: "")
+            let response = alert.runModal()
             
-        case .alertThirdButtonReturn: // View Logs
-            logInfo("RecordingCoordinator: Opening log file")
-            openLogFile()
-            
-        default: // Cancel
-            logInfo("RecordingCoordinator: Transcription error dismissed")
+            switch response {
+            case .alertFirstButtonReturn: // Retry
+                logInfo("RecordingCoordinator: Retrying transcription")
+                self.transcribeAudio(recordingURL: recordingURL)
+                
+            case .alertSecondButtonReturn: // Show in Finder
+                logInfo("RecordingCoordinator: Showing in Finder: \(recordingURL)")
+                NSWorkspace.shared.selectFile(recordingURL.path, inFileViewerRootedAtPath: "")
+                
+            case .alertThirdButtonReturn: // View Logs
+                logInfo("RecordingCoordinator: Opening log file")
+                self.openLogFile()
+                
+            default: // Cancel
+                logInfo("RecordingCoordinator: Transcription error dismissed")
+            }
         }
     }
     
@@ -133,5 +158,6 @@ class RecordingCoordinator: ObservableObject {
         if let observer = notificationObserver {
             NotificationCenter.default.removeObserver(observer)
         }
+        NotificationCenter.default.removeObserver(self, name: NSNotification.Name("TranscriptionStatusChanged"), object: nil)
     }
 } 

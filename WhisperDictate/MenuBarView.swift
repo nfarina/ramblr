@@ -30,16 +30,34 @@ struct MenuBarView: View {
                         .foregroundColor(.red)
                 } else if transcriptionManager.isTranscribing {
                     HStack(spacing: 4) {
-                        Text("Transcribing")
-                            .foregroundColor(.yellow)
+                        if !transcriptionManager.statusMessage.isEmpty {
+                            Text(transcriptionManager.statusMessage)
+                                .foregroundColor(.yellow)
+                        } else {
+                            Text("Transcribing")
+                                .foregroundColor(.yellow)
+                        }
                         ProgressView()
                             .scaleEffect(0.5)
                             .frame(width: 12, height: 12)
                     }
+                } else if !transcriptionManager.statusMessage.isEmpty {
+                    Text(transcriptionManager.statusMessage)
+                        .foregroundColor(.orange)
                 } else {
                     Text("Ready")
                         .foregroundColor(.primary)
                 }
+            }
+            
+            if audioManager.networkStressLevel > 0 {
+                HStack {
+                    Image(systemName: "network")
+                    Text("Network quality: reduced")
+                        .font(.caption)
+                        .foregroundColor(.orange)
+                }
+                .padding(.top, 2)
             }
             
             Divider()

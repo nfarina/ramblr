@@ -38,8 +38,9 @@ struct WhisperDictateApp: App {
         
         // Create managers first
         let audio = AudioManager()
+        // Create transcription manager with audio manager reference
+        let transcription = TranscriptionManager(audioManager: audio)
         let hotkey = HotkeyManager()
-        let transcription = TranscriptionManager()
         
         // Initialize coordinator with the same instances
         let coordinator = RecordingCoordinator(
