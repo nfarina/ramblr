@@ -7,16 +7,16 @@
 	objects = {
 
 /* Begin PBXFileReference section */
-		01607EFB2D1883C80006DBE4 /* WhisperDictate.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WhisperDictate.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		01607EFB2D1883C80006DBE4 /* Ramblr.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Ramblr.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		01607F232D1898E10006DBE4 /* Exceptions for "WhisperDictate" folder in "WhisperDictate" target */ = {
+		01607F232D1898E10006DBE4 /* Exceptions for "WhisperDictate" folder in "Ramblr" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
 			);
-			target = 01607EFA2D1883C80006DBE4 /* WhisperDictate */;
+			target = 01607EFA2D1883C80006DBE4 /* Ramblr */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -24,7 +24,7 @@
 		01607EFD2D1883C80006DBE4 /* WhisperDictate */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				01607F232D1898E10006DBE4 /* Exceptions for "WhisperDictate" folder in "WhisperDictate" target */,
+				01607F232D1898E10006DBE4 /* Exceptions for "WhisperDictate" folder in "Ramblr" target */,
 			);
 			path = WhisperDictate;
 			sourceTree = "<group>";
@@ -53,7 +53,7 @@
 		01607EFC2D1883C80006DBE4 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				01607EFB2D1883C80006DBE4 /* WhisperDictate.app */,
+				01607EFB2D1883C80006DBE4 /* Ramblr.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -61,9 +61,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		01607EFA2D1883C80006DBE4 /* WhisperDictate */ = {
+		01607EFA2D1883C80006DBE4 /* Ramblr */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 01607F0A2D1883C90006DBE4 /* Build configuration list for PBXNativeTarget "WhisperDictate" */;
+			buildConfigurationList = 01607F0A2D1883C90006DBE4 /* Build configuration list for PBXNativeTarget "Ramblr" */;
 			buildPhases = (
 				01607EF72D1883C80006DBE4 /* Sources */,
 				01607EF82D1883C80006DBE4 /* Frameworks */,
@@ -76,11 +76,11 @@
 			fileSystemSynchronizedGroups = (
 				01607EFD2D1883C80006DBE4 /* WhisperDictate */,
 			);
-			name = WhisperDictate;
+			name = Ramblr;
 			packageProductDependencies = (
 			);
 			productName = WhisperDictate;
-			productReference = 01607EFB2D1883C80006DBE4 /* WhisperDictate.app */;
+			productReference = 01607EFB2D1883C80006DBE4 /* Ramblr.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -112,7 +112,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				01607EFA2D1883C80006DBE4 /* WhisperDictate */,
+				01607EFA2D1883C80006DBE4 /* Ramblr */,
 			);
 		};
 /* End PBXProject section */
@@ -266,9 +266,11 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"WhisperDictate/Preview Content\"";
+				DEVELOPMENT_TEAM = RCRD96UZHN;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = WhisperDictate/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Ramblr;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "WhisperDictate needs the microphone to capture your voice for dictation.";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -293,9 +295,11 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"WhisperDictate/Preview Content\"";
+				DEVELOPMENT_TEAM = RCRD96UZHN;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = WhisperDictate/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Ramblr;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "WhisperDictate needs the microphone to capture your voice for dictation.";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -322,7 +326,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		01607F0A2D1883C90006DBE4 /* Build configuration list for PBXNativeTarget "WhisperDictate" */ = {
+		01607F0A2D1883C90006DBE4 /* Build configuration list for PBXNativeTarget "Ramblr" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				01607F0B2D1883C90006DBE4 /* Debug */,
