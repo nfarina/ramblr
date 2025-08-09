@@ -276,6 +276,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Ramblr/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Ramblr;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Ramblr needs the microphone to capture your voice for dictation.";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -306,6 +307,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Ramblr/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Ramblr;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Ramblr needs the microphone to capture your voice for dictation.";
 				LD_RUNPATH_SEARCH_PATHS = (
