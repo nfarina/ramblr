@@ -6,6 +6,7 @@ struct MenuBarView: View {
     @ObservedObject var transcriptionManager: TranscriptionManager
     @ObservedObject var coordinator: RecordingCoordinator
     @State private var apiKey: String = UserDefaults.standard.string(forKey: "OpenAIAPIKey") ?? ""
+    @State private var autoPasteEnabled: Bool = (UserDefaults.standard.object(forKey: "AutoPasteEnabled") as? Bool) ?? false
     
     init(audioManager: AudioManager, hotkeyManager: HotkeyManager, transcriptionManager: TranscriptionManager, coordinator: RecordingCoordinator) {
         self.audioManager = audioManager
@@ -22,7 +23,7 @@ struct MenuBarView: View {
             
             HStack {
                 Text("Status:")
-                if !transcriptionManager.hasAccessibilityPermission {
+                if autoPasteEnabled && !transcriptionManager.hasAccessibilityPermission {
                     Text("Needs Accessibility Permission")
                         .foregroundColor(.red)
                 } else if audioManager.isRecording {
@@ -70,10 +71,26 @@ struct MenuBarView: View {
                         transcriptionManager.setAPIKey(newValue)
                         logInfo("API Key updated")
                     }
+
+                Toggle(isOn: $autoPasteEnabled) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Auto-paste into active app")
+                        Text("Off: copy to clipboard + notify")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .onChange(of: autoPasteEnabled) { _, newValue in
+                    UserDefaults.standard.set(newValue, forKey: "AutoPasteEnabled")
+                    logInfo("AutoPasteEnabled set to \(newValue)")
+                    if newValue {
+                        transcriptionManager.checkAccessibilityPermission(shouldPrompt: true)
+                    }
+                }
             }
             .padding(.vertical, 5)
             
-            if !transcriptionManager.hasAccessibilityPermission {
+            if autoPasteEnabled && !transcriptionManager.hasAccessibilityPermission {
                 Text("⚠️ Accessibility permission required")
                     .font(.caption)
                     .foregroundColor(.red)
@@ -86,12 +103,46 @@ struct MenuBarView: View {
                 .padding(.bottom, 5)
             }
             
+            // Start/Stop controls
+            HStack {
+                Button(action: {
+                    coordinator.toggleRecordingFromUI()
+                }) {
+                    HStack(spacing: 6) {
+                        Image(systemName: audioManager.isRecording ? "stop.circle" : "record.circle")
+                        Text(audioManager.isRecording ? "Stop Recording" : "Start Recording")
+                    }
+                }
+                .keyboardShortcut(.defaultAction)
+            }
             Text("Press Option+D to start/stop recording")
                 .font(.caption)
                 .foregroundColor(.secondary)
             
             Divider()
             
+            // History section
+            if !transcriptionManager.history.isEmpty {
+                Text("History")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(Array(transcriptionManager.history.enumerated()), id: \.offset) { _, item in
+                        Button(action: {
+                            transcriptionManager.copyFromHistory(item)
+                        }) {
+                            HStack(alignment: .top, spacing: 8) {
+                                Image(systemName: "doc.on.doc")
+                                Text(item)
+                                    .lineLimit(2)
+                                    .truncationMode(.tail)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+
             HStack {
                 Button(action: {
                     logInfo("Viewing application logs")
@@ -114,6 +165,6 @@ struct MenuBarView: View {
             }
         }
         .padding()
-        .frame(width: 250)
+        .frame(width: 320)
     }
 }

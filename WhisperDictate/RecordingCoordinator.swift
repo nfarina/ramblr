@@ -48,6 +48,11 @@ class RecordingCoordinator: ObservableObject {
         Logger.shared.openLogFile()
     }
     
+    // Public method for UI to start/stop recording
+    func toggleRecordingFromUI() {
+        toggleRecording()
+    }
+    
     private func toggleRecording() {
         logInfo("RecordingCoordinator: toggleRecording called, current state: \(audioManager.isRecording)")
         
@@ -91,7 +96,7 @@ class RecordingCoordinator: ObservableObject {
             if let text = text {
                 logInfo("RecordingCoordinator: Received transcription: \(text)")
                 logInfo("Transcription successful: \(text.prefix(50))...")
-                self.transcriptionManager.pasteText(text)
+                self.transcriptionManager.handleTranscriptionOutput(text)
             } else {
                 logError("RecordingCoordinator: Transcription failed after retries")
                 DispatchQueue.main.async {

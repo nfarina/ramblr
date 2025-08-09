@@ -1,6 +1,7 @@
 import Foundation
 import AppKit
 import CoreGraphics
+import UserNotifications
 
 // Enumeration for transcription errors
 enum TranscriptionError: Error {
@@ -36,6 +37,7 @@ class TranscriptionManager: ObservableObject {
     @Published var isTranscribing = false
     @Published var hasAccessibilityPermission = false
     @Published var statusMessage = ""
+    @Published var history: [String] = []
     private var apiKey: String?
     
     // Retry configuration
@@ -48,7 +50,15 @@ class TranscriptionManager: ObservableObject {
     init(audioManager: AudioManager? = nil) {
         self.audioManager = audioManager
         loadAPIKey()
-        checkAccessibilityPermission()
+        loadHistory()
+        // Do not prompt on startup unless auto-paste is enabled
+        let autoPasteEnabled = (UserDefaults.standard.object(forKey: "AutoPasteEnabled") as? Bool) ?? false
+        if autoPasteEnabled {
+            checkAccessibilityPermission(shouldPrompt: true)
+        } else {
+            // Update state silently without prompting
+            checkAccessibilityPermission(shouldPrompt: false)
+        }
     }
     
     func setAudioManager(_ audioManager: AudioManager) {
@@ -64,12 +74,12 @@ class TranscriptionManager: ObservableObject {
         UserDefaults.standard.set(key, forKey: "OpenAIAPIKey")
     }
     
-    private func checkAccessibilityPermission() {
+    func checkAccessibilityPermission(shouldPrompt: Bool = false) {
         // Check if we have accessibility permission
         let trusted = AXIsProcessTrusted()
         DispatchQueue.main.async {
             self.hasAccessibilityPermission = trusted
-            if !trusted {
+            if !trusted && shouldPrompt {
                 self.showAccessibilityAlert()
             }
         }
@@ -374,6 +384,119 @@ class TranscriptionManager: ObservableObject {
                 logInfo("Successfully typed text")
             }
         }
+    }
+
+    // MARK: - Output Handling
+
+    /// Routes the transcription output based on the user's preference.
+    /// When AutoPaste is enabled (default), the text is typed into the active app.
+    /// Otherwise, the text is copied to the clipboard and a notification is shown.
+    func handleTranscriptionOutput(_ text: String) {
+        let isAutoPasteEnabled = (UserDefaults.standard.object(forKey: "AutoPasteEnabled") as? Bool) ?? false
+        addToHistory(text)
+        if isAutoPasteEnabled {
+            // If auto-paste is on but we don't have permission, show prompt and fall back to copy
+            if !AXIsProcessTrusted() {
+                checkAccessibilityPermission(shouldPrompt: true)
+                copyToClipboardAndNotify(text)
+            } else {
+                pasteText(text)
+            }
+        } else {
+            copyToClipboardAndNotify(text)
+        }
+    }
+
+    /// Copies the given text to the clipboard and posts a local notification to inform the user.
+    private func copyToClipboardAndNotify(_ text: String) {
+        logInfo("Copying transcription to clipboard")
+
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(text, forType: .string)
+
+        DispatchQueue.main.async {
+            self.statusMessage = "Copied to clipboard"
+            NotificationCenter.default.post(
+                name: NSNotification.Name("TranscriptionStatusChanged"),
+                object: nil,
+                userInfo: ["status": "Copied to clipboard"]
+            )
+        }
+
+        requestNotificationAuthorizationIfNeeded { authorized in
+            guard authorized else { return }
+
+            let content = UNMutableNotificationContent()
+            content.title = "Transcription copied to clipboard"
+            let preview = text.prefix(80)
+            content.body = preview.isEmpty ? "Ready to paste." : "\(preview)…"
+            content.sound = .default
+
+            let request = UNNotificationRequest(
+                identifier: UUID().uuidString,
+                content: content,
+                trigger: nil // deliver immediately
+            )
+
+            UNUserNotificationCenter.current().add(request) { error in
+                if let error = error {
+                    logError("Failed to deliver notification: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+
+    /// Requests user notification permission only if needed, then calls completion with current authorization state.
+    private func requestNotificationAuthorizationIfNeeded(completion: @escaping (Bool) -> Void) {
+        let center = UNUserNotificationCenter.current()
+        center.getNotificationSettings { settings in
+            switch settings.authorizationStatus {
+            case .notDetermined:
+                center.requestAuthorization(options: [.alert, .sound]) { granted, _ in
+                    completion(granted)
+                }
+            case .authorized, .provisional:
+                completion(true)
+            default:
+                completion(false)
+            }
+        }
+    }
+
+    // MARK: - History
+
+    private let historyKey = "TranscriptionHistory"
+    private let historyLimit = 10
+
+    private func loadHistory() {
+        if let stored = UserDefaults.standard.array(forKey: historyKey) as? [String] {
+            DispatchQueue.main.async {
+                self.history = stored
+            }
+        }
+    }
+
+    private func persistHistory() {
+        UserDefaults.standard.set(history, forKey: historyKey)
+    }
+
+    private func addToHistory(_ text: String) {
+        DispatchQueue.main.async {
+            // Remove existing duplicate if present, then insert at top
+            if let existingIndex = self.history.firstIndex(of: text) {
+                self.history.remove(at: existingIndex)
+            }
+            self.history.insert(text, at: 0)
+            if self.history.count > self.historyLimit {
+                self.history = Array(self.history.prefix(self.historyLimit))
+            }
+            self.persistHistory()
+        }
+    }
+
+    func copyFromHistory(_ text: String) {
+        copyToClipboardAndNotify(text)
     }
     
     private func showAccessibilityAlert() {
