@@ -16,9 +16,15 @@ class Logger {
     }
     
     private init() {
-        // Set up log file in Documents directory
-        let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-        self.logFileURL = documentsDirectory.appendingPathComponent("WhisperDictate.log")
+        // Set up log file in Application Support to avoid prompting for Documents access
+        let appSupportDirectory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        let appDirectory = appSupportDirectory.appendingPathComponent("WhisperDictate", isDirectory: true)
+        do {
+            try FileManager.default.createDirectory(at: appDirectory, withIntermediateDirectories: true)
+        } catch {
+            print("Error creating Application Support directory: \(error)")
+        }
+        self.logFileURL = appDirectory.appendingPathComponent("WhisperDictate.log")
         
         // Configure date formatter
         self.dateFormatter = DateFormatter()

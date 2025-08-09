@@ -53,6 +53,25 @@ class RecordingCoordinator: ObservableObject {
         toggleRecording()
     }
     
+    // Public method to cancel the current recording without transcribing
+    func cancelRecording() {
+        guard audioManager.isRecording else { return }
+        logInfo("RecordingCoordinator: Cancelling recording at user request")
+        if let url = audioManager.stopRecording() {
+            // Discard the recorded file
+            try? FileManager.default.removeItem(at: url)
+            logInfo("RecordingCoordinator: Discarded recording file \(url.lastPathComponent)")
+        }
+        DispatchQueue.main.async {
+            self.transcriptionManager.statusMessage = "Recording cancelled"
+            NotificationCenter.default.post(
+                name: NSNotification.Name("TranscriptionStatusChanged"),
+                object: nil,
+                userInfo: ["status": "Recording cancelled"]
+            )
+        }
+    }
+    
     private func toggleRecording() {
         logInfo("RecordingCoordinator: toggleRecording called, current state: \(audioManager.isRecording)")
         

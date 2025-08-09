@@ -72,21 +72,21 @@ struct MenuBarView: View {
                         logInfo("API Key updated")
                     }
 
-                Toggle(isOn: $autoPasteEnabled) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Auto-paste into active app")
-                        Text("Off: copy to clipboard + notify")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                }
-                .onChange(of: autoPasteEnabled) { _, newValue in
-                    UserDefaults.standard.set(newValue, forKey: "AutoPasteEnabled")
-                    logInfo("AutoPasteEnabled set to \(newValue)")
-                    if newValue {
-                        transcriptionManager.checkAccessibilityPermission(shouldPrompt: true)
-                    }
-                }
+//                Toggle(isOn: $autoPasteEnabled) {
+//                    VStack(alignment: .leading, spacing: 2) {
+//                        Text("Auto-paste into active app")
+//                        Text("Off: copy to clipboard + notify")
+//                            .font(.caption)
+//                            .foregroundColor(.secondary)
+//                    }
+//                }
+//                .onChange(of: autoPasteEnabled) { _, newValue in
+//                    UserDefaults.standard.set(newValue, forKey: "AutoPasteEnabled")
+//                    logInfo("AutoPasteEnabled set to \(newValue)")
+//                    if newValue {
+//                        transcriptionManager.checkAccessibilityPermission(shouldPrompt: true)
+//                    }
+//                }
             }
             .padding(.vertical, 5)
             
@@ -104,7 +104,7 @@ struct MenuBarView: View {
             }
             
             // Start/Stop controls
-            HStack {
+            HStack(spacing: 8) {
                 Button(action: {
                     coordinator.toggleRecordingFromUI()
                 }) {
@@ -114,6 +114,18 @@ struct MenuBarView: View {
                     }
                 }
                 .keyboardShortcut(.defaultAction)
+
+                if audioManager.isRecording {
+                    Button(action: {
+                        coordinator.cancelRecording()
+                    }) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "xmark.circle")
+                            Text("Cancel")
+                        }
+                    }
+                    .buttonStyle(.borderless)
+                }
             }
             Text("Press Option+D to start/stop recording")
                 .font(.caption)
@@ -156,6 +168,19 @@ struct MenuBarView: View {
                 
                 Spacer()
                 
+                if !transcriptionManager.history.isEmpty {
+                    Button(action: {
+                        transcriptionManager.clearHistory()
+                    }) {
+                        HStack {
+                            Image(systemName: "trash")
+                            Text("Clear History")
+                        }
+                    }
+                }
+
+                Spacer()
+
                 Button(action: {
                     logInfo("User initiated app quit")
                     NSApplication.shared.terminate(nil)

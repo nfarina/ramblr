@@ -498,6 +498,19 @@ class TranscriptionManager: ObservableObject {
     func copyFromHistory(_ text: String) {
         copyToClipboardAndNotify(text)
     }
+
+    func clearHistory() {
+        DispatchQueue.main.async {
+            self.history.removeAll()
+            UserDefaults.standard.removeObject(forKey: self.historyKey)
+            self.statusMessage = "History cleared"
+            NotificationCenter.default.post(
+                name: NSNotification.Name("TranscriptionStatusChanged"),
+                object: nil,
+                userInfo: ["status": "History cleared"]
+            )
+        }
+    }
     
     private func showAccessibilityAlert() {
         DispatchQueue.main.async {
