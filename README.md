@@ -1,63 +1,55 @@
-# WhisperDictate
+<img width="256" height="256" alt="Rambl" src="https://github.com/user-attachments/assets/c933452f-f665-4710-b22d-ac1305d3e3b4" />
 
-![icon_128x128](https://github.com/user-attachments/assets/4780e5f1-e609-45f8-acb9-e4e8053461e1)
+# Ramblr
 
-A macOS menu bar app that lets you dictate text anywhere using OpenAI's Whisper API. Just press a hotkey, speak, and your words will be typed wherever your cursor is.
+Are you spending time composing your thoughts, then typing them carefully into the "prompt" box for an AI like ChatGPT, Cursor, or Claude Code?
+
+Stop that!
+
+AI doesn't need your thoughts and instructions all nicely written out like this README is for humans. Rambling is better! Here's an example:
+
+<img width="512" height="512" alt="Rambl ramble" src="https://github.com/user-attachments/assets/44f9a7ab-34c2-4780-9c58-747dd1e37afb"/>
+
+Wow, that's a lot of text to read - but AI is *great* at reading lots of text like this, and this text is _full_ of useful information. Rambles better represent your true state of mind: you might repeat yourself if you're sure about something, or waffle when you're not. That's all signal.
+
+The best way to ramble is to hit Start Listening before you even begin reviewing an AI's response. Then just blab your thoughts while you're looking over its work, and when you're done reviewing, hit Stop. Ramblr will transcribe your blatherings using OpenAI's Whisper API with astonishing accuracy, then put the result in your clipboard and beep a notification when it's ready to be pasted somewhere.
+
+Ramblr is a native macOS app that lives in your menubar. All you need to do is download the app and paste your [OpenAI API key](https://platform.openai.com/api-keys).
+
+<img width="378" height="412" alt="image" src="https://github.com/user-attachments/assets/deac7513-ef88-4598-91b2-4201e29faa9b" />
 
 ## Features
 
-- 🎙️ Quick recording with global hotkey (⌘+Ctrl+R)
-- 🤖 Fast, accurate transcription using OpenAI's Whisper API
-- ⌨️ Types text directly into any app
-- 🔒 Secure API key storage
-- 🖥️ Clean menu bar interface
-- 📝 Works in any text field or editor
+- Global hotkey (⌥D) to start/stop recording
+- Near-perfect transcription via OpenAI Whisper API
+- Copies to clipboard and notifies with sound when ready to paste
+- History of the last 10 transcriptions for quick re-copy
+
+## Wait, doesn't this already exist?
+
+[Yes](https://superwhisper.com), [yes](https://goodsnooze.gumroad.com/l/macwhisper), [yes](https://wisprflow.ai). But I have problems with them all:
+
+- They all want to lock you into a subscription model. For dictation!
+- They either use a local transcription model (not as accurate, or slower) or the Whisper API (that's the real magic here)
+
+I just wanted something I could use at cost. So I vibe-coded Ramblr. It's free to download and use! You just pay OpenAI directly for the Whisper API, which is pennies.
 
 ## Requirements
 
-- macOS 13.0 or later
+- macOS 13 or later
 - OpenAI API key
-- Xcode 15+ (for building)
 
-## Setup
+## Download
 
-1. Clone the repository
-2. Open `WhisperDictate.xcodeproj` in Xcode
-3. Build and run
-4. Click the microphone icon in the menu bar
-5. Enter your OpenAI API key in settings
-6. Grant accessibility permissions when prompted
+You can [download the latest release here](https://github.com/nfarina/ramblr/releases) or just build it yourself from source in Xcode.
 
-## Usage
+## Privacy & Storage
 
-1. Place your cursor where you want to type
-2. Press ⌘+Ctrl+R
-3. Speak clearly
-4. Press ⌘+Ctrl+R again to stop recording
-5. Wait for transcription (1-2 seconds)
-6. Your text will be typed automatically
-
-## Privacy & Security
-
-- Your API key is stored securely in macOS Keychain
-- Audio is processed through OpenAI's Whisper API
-- No audio is stored locally after transcription
-- Requires accessibility permissions to type text
-
-## Building from Source
-
-```bash
-git clone https://github.com/yourusername/whisper-dictate.git
-cd whisper-dictate
-open WhisperDictate.xcodeproj
-```
+- Audio is recorded to a temporary file during recording and removed after
+- Transcription history (last 10 items) and the API key are stored in UserDefaults
+- Logs are written to `~/Library/Application Support/WhisperDictate/WhisperDictate.log`
+- Transcription is performed by OpenAI’s Whisper API
 
 ## License
 
-MIT License - see LICENSE file for details
-
-## Acknowledgments
-
-- [OpenAI Whisper](https://openai.com/research/whisper) for the amazing speech recognition
-- [SwiftUI](https://developer.apple.com/xcode/swiftui/) for the native macOS interface
-- [Codeium's Cascade](https://codeium.com) for pair programming assistance in building this app
+MIT License — see `LICENSE.txt`
