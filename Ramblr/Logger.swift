@@ -18,13 +18,13 @@ class Logger {
     private init() {
         // Set up log file in Application Support to avoid prompting for Documents access
         let appSupportDirectory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        let appDirectory = appSupportDirectory.appendingPathComponent("WhisperDictate", isDirectory: true)
+        let appDirectory = appSupportDirectory.appendingPathComponent("Ramblr", isDirectory: true)
         do {
             try FileManager.default.createDirectory(at: appDirectory, withIntermediateDirectories: true)
         } catch {
             print("Error creating Application Support directory: \(error)")
         }
-        self.logFileURL = appDirectory.appendingPathComponent("WhisperDictate.log")
+        self.logFileURL = appDirectory.appendingPathComponent("Ramblr.log")
         
         // Configure date formatter
         self.dateFormatter = DateFormatter()
@@ -39,7 +39,7 @@ class Logger {
         )
         
         // Log app start
-        log("WhisperDictate application launched", level: .info)
+        log("Ramblr application launched", level: .info)
     }
     
     // Main logging function
@@ -115,7 +115,7 @@ class Logger {
     }
     
     deinit {
-        log("WhisperDictate application terminated", level: .info)
+        log("Ramblr application terminated", level: .info)
         NotificationCenter.default.removeObserver(self)
     }
 }

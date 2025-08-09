@@ -11,7 +11,7 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		01607F232D1898E10006DBE4 /* Exceptions for "WhisperDictate" folder in "Ramblr" target */ = {
+		01607F232D1898E10006DBE4 /* Exceptions for "Ramblr" folder in "Ramblr" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
@@ -21,12 +21,12 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		01607EFD2D1883C80006DBE4 /* WhisperDictate */ = {
+		01607EFD2D1883C80006DBE4 /* Ramblr */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				01607F232D1898E10006DBE4 /* Exceptions for "WhisperDictate" folder in "Ramblr" target */,
+				01607F232D1898E10006DBE4 /* Exceptions for "Ramblr" folder in "Ramblr" target */,
 			);
-			path = WhisperDictate;
+			path = Ramblr;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -45,7 +45,7 @@
 		01607EF22D1883C80006DBE4 = {
 			isa = PBXGroup;
 			children = (
-				01607EFD2D1883C80006DBE4 /* WhisperDictate */,
+				01607EFD2D1883C80006DBE4 /* Ramblr */,
 				01607EFC2D1883C80006DBE4 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -74,12 +74,12 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				01607EFD2D1883C80006DBE4 /* WhisperDictate */,
+				01607EFD2D1883C80006DBE4 /* Ramblr */,
 			);
 			name = Ramblr;
 			packageProductDependencies = (
 			);
-			productName = WhisperDictate;
+			productName = Ramblr;
 			productReference = 01607EFB2D1883C80006DBE4 /* Ramblr.app */;
 			productType = "com.apple.product-type.application";
 		};
@@ -91,14 +91,14 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1620;
-				LastUpgradeCheck = 1620;
+				LastUpgradeCheck = 1640;
 				TargetAttributes = {
 					01607EFA2D1883C80006DBE4 = {
 						CreatedOnToolsVersion = 16.2;
 					};
 				};
 			};
-			buildConfigurationList = 01607EF62D1883C80006DBE4 /* Build configuration list for PBXProject "WhisperDictate" */;
+			buildConfigurationList = 01607EF62D1883C80006DBE4 /* Build configuration list for PBXProject "Ramblr" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -172,7 +172,9 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = RCRD96UZHN;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -235,7 +237,9 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = RCRD96UZHN;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -261,25 +265,25 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = WhisperDictate/WhisperDictate.entitlements;
+				CODE_SIGN_ENTITLEMENTS = Ramblr/Ramblr.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_ASSET_PATHS = "\"WhisperDictate/Preview Content\"";
-				DEVELOPMENT_TEAM = RCRD96UZHN;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_ASSET_PATHS = "\"Ramblr/Preview Content\"";
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = WhisperDictate/Info.plist;
+				INFOPLIST_FILE = Ramblr/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Ramblr;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "WhisperDictate needs the microphone to capture your voice for dictation.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Ramblr needs the microphone to capture your voice for dictation.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.nfarina.WhisperDictate;
+				PRODUCT_BUNDLE_IDENTIFIER = com.nfarina.Ramblr;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -291,25 +295,25 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = WhisperDictate/WhisperDictate.entitlements;
+				CODE_SIGN_ENTITLEMENTS = Ramblr/Ramblr.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_ASSET_PATHS = "\"WhisperDictate/Preview Content\"";
-				DEVELOPMENT_TEAM = RCRD96UZHN;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_ASSET_PATHS = "\"Ramblr/Preview Content\"";
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = WhisperDictate/Info.plist;
+				INFOPLIST_FILE = Ramblr/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Ramblr;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "WhisperDictate needs the microphone to capture your voice for dictation.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Ramblr needs the microphone to capture your voice for dictation.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.nfarina.WhisperDictate;
+				PRODUCT_BUNDLE_IDENTIFIER = com.nfarina.Ramblr;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -319,7 +323,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		01607EF62D1883C80006DBE4 /* Build configuration list for PBXProject "WhisperDictate" */ = {
+		01607EF62D1883C80006DBE4 /* Build configuration list for PBXProject "Ramblr" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				01607F082D1883C90006DBE4 /* Debug */,

@@ -516,7 +516,7 @@ class TranscriptionManager: ObservableObject {
         DispatchQueue.main.async {
             let alert = NSAlert()
             alert.messageText = "Permission Required"
-            alert.informativeText = "WhisperDictate needs accessibility permission to simulate keyboard events. Please grant access in System Settings > Privacy & Security > Accessibility, then quit and relaunch WhisperDictate."
+            alert.informativeText = "Ramblr needs accessibility permission to simulate keyboard events. Please grant access in System Settings > Privacy & Security > Accessibility, then quit and relaunch Ramblr."
             alert.alertStyle = .warning
             alert.addButton(withTitle: "Open System Settings")
             alert.addButton(withTitle: "Cancel")

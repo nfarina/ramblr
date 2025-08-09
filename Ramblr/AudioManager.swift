@@ -10,7 +10,7 @@ class AudioManager: NSObject, ObservableObject {
     private var recordingURL: URL?
     private var converter: AVAudioConverter?
     private var volumeMeter: AVAudioMixerNode?
-    private let audioQueue = DispatchQueue(label: "com.nfarina.WhisperDictate.audio")
+    private let audioQueue = DispatchQueue(label: "com.nfarina.Ramblr.audio")
     
     // Audio analysis parameters
     private var totalSamples: Int = 0
@@ -65,7 +65,7 @@ class AudioManager: NSObject, ObservableObject {
                 DispatchQueue.main.async {
                     let alert = NSAlert()
                     alert.messageText = "Microphone Access Required"
-                    alert.informativeText = "WhisperDictate needs microphone access to record audio for transcription. Please grant access in System Settings > Privacy & Security > Microphone."
+                    alert.informativeText = "Ramblr needs microphone access to record audio for transcription. Please grant access in System Settings > Privacy & Security > Microphone."
                     alert.alertStyle = .warning
                     alert.addButton(withTitle: "Open System Settings")
                     alert.addButton(withTitle: "Cancel")
@@ -82,7 +82,7 @@ class AudioManager: NSObject, ObservableObject {
     
     private func setupRecordingURL() {
         let tempPath = URL(fileURLWithPath: "/tmp")
-        recordingURL = tempPath.appendingPathComponent("whisper-dictate-recording.wav")
+        recordingURL = tempPath.appendingPathComponent("ramble.wav")
         try? FileManager.default.removeItem(at: recordingURL!)
     }
     
@@ -398,7 +398,7 @@ class AudioManager: NSObject, ObservableObject {
             
             // Calculate compression ratio
             let compressionRatio = 16000.0 / targetSampleRate
-            let downsampledLength = Int(Double(buffer.count) / compressionRatio)
+            _ = Int(Double(buffer.count) / compressionRatio)
             
             // Simple downsampling by taking every Nth sample
             var downsampledBuffer = [Int16]()

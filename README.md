@@ -47,7 +47,7 @@ You can [download the latest release here](https://github.com/nfarina/ramblr/rel
 
 - Audio is recorded to a temporary file during recording and removed after
 - Transcription history (last 10 items) and the API key are stored in UserDefaults
-- Logs are written to `~/Library/Application Support/WhisperDictate/WhisperDictate.log`
+- Logs are written to `~/Library/Application Support/Ramblr/Ramblr.log`
 - Transcription is performed by OpenAI’s Whisper API
 
 ## License

@@ -1,10 +1,3 @@
-//
-//  WhisperDictateApp.swift
-//  WhisperDictate
-//
-//  Created by Nick Farina on 12/22/24.
-//
-
 import SwiftUI
 import Cocoa
 
@@ -23,7 +16,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 }
 
 @main
-struct WhisperDictateApp: App {
+struct RamblrApp: App {
     @StateObject private var audioManager = AudioManager()
     @StateObject private var hotkeyManager = HotkeyManager()
     @StateObject private var transcriptionManager = TranscriptionManager()
@@ -34,7 +27,7 @@ struct WhisperDictateApp: App {
     private let logger = Logger.shared
     
     init() {
-        logInfo("WhisperDictateApp: Initializing")
+        logInfo("RamblrApp: Initializing")
         
         // Create managers first
         let audio = AudioManager()

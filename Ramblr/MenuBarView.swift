@@ -17,7 +17,7 @@ struct MenuBarView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("WhisperDictate")
+            Text("Ramblr")
                 .font(.headline)
                 .padding(.bottom, 5)
             

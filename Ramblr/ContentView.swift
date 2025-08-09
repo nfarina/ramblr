@@ -1,10 +1,3 @@
-//
-//  ContentView.swift
-//  WhisperDictate
-//
-//  Created by Nick Farina on 12/22/24.
-//
-
 import SwiftUI
 
 struct ContentView: View {

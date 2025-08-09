@@ -5,8 +5,8 @@
     <key>LSUIElement</key>
     <true/>
     <key>NSAppleEventsUsageDescription</key>
-    <string>WhisperDictate needs to simulate keyboard events to paste transcribed text.</string>
+    <string>Ramblr needs to simulate keyboard events to paste transcribed text.</string>
     <key>NSAccessibilityUsageDescription</key>
-    <string>WhisperDictate needs accessibility access to simulate keyboard events for pasting.</string>
+    <string>Ramblr needs accessibility access to simulate keyboard events for pasting.</string>
 </dict>
 </plist>
