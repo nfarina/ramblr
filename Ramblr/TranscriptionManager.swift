@@ -453,8 +453,24 @@ class TranscriptionManager: ObservableObject {
         center.getNotificationSettings { settings in
             switch settings.authorizationStatus {
             case .notDetermined:
-                center.requestAuthorization(options: [.alert, .sound]) { granted, _ in
-                    completion(granted)
+                // For LSUIElement (agent) apps, the system may not show the permission prompt
+                // unless the app is temporarily activated. Elevate policy briefly to ensure
+                // the prompt appears, then restore the prior policy.
+                DispatchQueue.main.async {
+                    let previousPolicy = NSApp.activationPolicy()
+                    let shouldElevate = previousPolicy != .regular
+                    if shouldElevate {
+                        _ = NSApp.setActivationPolicy(.regular)
+                        NSApp.activate(ignoringOtherApps: true)
+                    }
+                    center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
+                        DispatchQueue.main.async {
+                            if shouldElevate {
+                                _ = NSApp.setActivationPolicy(previousPolicy)
+                            }
+                            completion(granted)
+                        }
+                    }
                 }
             case .authorized, .provisional:
                 completion(true)

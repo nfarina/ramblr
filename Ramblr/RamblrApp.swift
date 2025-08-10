@@ -1,17 +1,27 @@
 import SwiftUI
 import Cocoa
+import UserNotifications
 
-class AppDelegate: NSObject, NSApplicationDelegate {
+class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         logInfo("Application did finish launching")
         // Just ensure we're not active
         if NSApp.isActive {
             NSApp.deactivate()
         }
+        // Ensure notifications show while app is active/agent
+        UNUserNotificationCenter.current().delegate = self
     }
     
     func applicationWillTerminate(_ notification: Notification) {
         logInfo("Application will terminate")
+    }
+
+    // Show alert/banner even if app is in foreground
+    func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                willPresent notification: UNNotification,
+                                withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        completionHandler([.banner, .list, .sound])
     }
 }
 
