@@ -1,4 +1,5 @@
 import SwiftUI
+import Carbon
 
 struct MenuBarView: View {
     @ObservedObject var audioManager: AudioManager
@@ -7,6 +8,7 @@ struct MenuBarView: View {
     @ObservedObject var coordinator: RecordingCoordinator
     @State private var apiKey: String = UserDefaults.standard.string(forKey: "OpenAIAPIKey") ?? ""
     @State private var autoPasteEnabled: Bool = (UserDefaults.standard.object(forKey: "AutoPasteEnabled") as? Bool) ?? false
+    @State private var showHotkeyChangePopover: Bool = false
     
     init(audioManager: AudioManager, hotkeyManager: HotkeyManager, transcriptionManager: TranscriptionManager, coordinator: RecordingCoordinator) {
         self.audioManager = audioManager
@@ -19,7 +21,8 @@ struct MenuBarView: View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Ramblr")
                 .font(.headline)
-                .padding(.bottom, 5)
+                .padding(.top, 2)
+                .padding(.bottom, 2)
             
             HStack {
                 Text("Status:")
@@ -61,32 +64,37 @@ struct MenuBarView: View {
                 .padding(.top, 2)
             }
             
-            Divider()
+            Divider().padding(.top, 6)
             
-            VStack(alignment: .leading) {
-                Text("OpenAI API Key:")
-                SecureField("Enter API Key", text: $apiKey)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .onChange(of: apiKey) { oldValue, newValue in
-                        transcriptionManager.setAPIKey(newValue)
-                        logInfo("API Key updated")
-                    }
+            VStack(alignment: .leading, spacing: 8) {
+                // Inline API key row
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text("OpenAI API Key:")
+                    SecureField("Enter API Key", text: $apiKey)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .onChange(of: apiKey) { oldValue, newValue in
+                            transcriptionManager.setAPIKey(newValue)
+                            logInfo("API Key updated")
+                        }
+                }
+                
+                Divider().padding(.top, 5).padding(.bottom, 8)
 
-//                Toggle(isOn: $autoPasteEnabled) {
-//                    VStack(alignment: .leading, spacing: 2) {
-//                        Text("Auto-paste into active app")
-//                        Text("Off: copy to clipboard + notify")
-//                            .font(.caption)
-//                            .foregroundColor(.secondary)
-//                    }
-//                }
-//                .onChange(of: autoPasteEnabled) { _, newValue in
-//                    UserDefaults.standard.set(newValue, forKey: "AutoPasteEnabled")
-//                    logInfo("AutoPasteEnabled set to \(newValue)")
-//                    if newValue {
-//                        transcriptionManager.checkAccessibilityPermission(shouldPrompt: true)
-//                    }
-//                }
+                Toggle(isOn: $autoPasteEnabled) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Auto-paste into active app")
+                        Text("Off: copy to clipboard + notify")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .onChange(of: autoPasteEnabled) { _, newValue in
+                    UserDefaults.standard.set(newValue, forKey: "AutoPasteEnabled")
+                    logInfo("AutoPasteEnabled set to \(newValue)")
+                    if newValue {
+                        transcriptionManager.checkAccessibilityPermission(shouldPrompt: true)
+                    }
+                }
             }
             .padding(.vertical, 5)
             
@@ -127,9 +135,42 @@ struct MenuBarView: View {
                     .buttonStyle(.borderless)
                 }
             }
-            Text("Press Option+D to start/stop recording")
-                .font(.caption)
-                .foregroundColor(.secondary)
+            HStack(spacing: 6) {
+                HStack(spacing: 4) {
+                    Text("Press")
+                    Text(hotkeyManager.displayString)
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundColor(.secondary)
+                    Text("to start/stop recording.")
+                    Button(action: { showHotkeyChangePopover = true }) {
+                        Text("Change").underline()
+                    }
+                    .buttonStyle(.plain)
+                    .popover(isPresented: $showHotkeyChangePopover, arrowEdge: .top) {
+                        VStack(spacing: 6) {
+                            Text("Press desired shortcut")
+                                .font(.headline)
+                            Text("Include modifiers like ⌘ ⌥ ⌃ ⇧")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .font(.subheadline)
+                            KeyCaptureRepresentable(
+                                onCaptured: { keyCode, flags in
+                                    let carbonMods = HotkeyManager.carbonFlags(from: flags)
+                                    hotkeyManager.updateHotkey(keyCode: UInt32(keyCode), modifiers: carbonMods)
+                                    showHotkeyChangePopover = false
+                                },
+                                onCancel: { showHotkeyChangePopover = false }
+                            )
+                            .frame(width: 200, height: 0)
+                        }
+                        .padding(8)
+                        .padding(.top, 6)
+                    }
+                }
+            }
+            .font(.caption)
+            .foregroundColor(.secondary)
             
             Divider()
             
@@ -191,5 +232,51 @@ struct MenuBarView: View {
         }
         .padding()
         .frame(width: 320)
+        .onAppear {
+            // Refresh accessibility status whenever the menu opens
+            transcriptionManager.checkAccessibilityPermission(shouldPrompt: false)
+        }
+    }
+}
+
+// NSView-based key capture to reliably receive keyDown with modifiers
+private struct KeyCaptureRepresentable: NSViewRepresentable {
+    let onCaptured: (UInt16, NSEvent.ModifierFlags) -> Void
+    let onCancel: () -> Void
+    
+    func makeNSView(context: Context) -> KeyCaptureView {
+        let v = KeyCaptureView()
+        v.onCaptured = onCaptured
+        v.onCancel = onCancel
+        return v
+    }
+    
+    func updateNSView(_ nsView: KeyCaptureView, context: Context) {}
+}
+
+private final class KeyCaptureView: NSView {
+    var onCaptured: ((UInt16, NSEvent.ModifierFlags) -> Void)?
+    var onCancel: (() -> Void)?
+    
+    override var acceptsFirstResponder: Bool { true }
+    
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        DispatchQueue.main.async { [weak self] in
+            self?.window?.makeFirstResponder(self)
+        }
+    }
+    
+    override func keyDown(with event: NSEvent) {
+        // Capture the keycode and current modifier flags
+        onCaptured?(event.keyCode, event.modifierFlags)
+    }
+    
+    override func flagsChanged(with event: NSEvent) {
+        // Ignore standalone modifier changes
+    }
+    
+    override func cancelOperation(_ sender: Any?) {
+        onCancel?()
     }
 }
