@@ -39,6 +39,8 @@ class TranscriptionManager: ObservableObject {
     @Published var statusMessage = ""
     @Published var history: [String] = []
     private var apiKey: String?
+    private let modelDefaultsKey = "TranscriptionModel"
+    private(set) var transcriptionModel: String = "whisper-1"
     
     // Retry configuration
     private let maxRetries = 3
@@ -51,6 +53,7 @@ class TranscriptionManager: ObservableObject {
         self.audioManager = audioManager
         loadAPIKey()
         loadHistory()
+        loadTranscriptionModel()
         // Do not prompt on startup unless auto-paste is enabled
         let autoPasteEnabled = (UserDefaults.standard.object(forKey: "AutoPasteEnabled") as? Bool) ?? false
         if autoPasteEnabled {
@@ -72,6 +75,20 @@ class TranscriptionManager: ObservableObject {
     func setAPIKey(_ key: String) {
         apiKey = key
         UserDefaults.standard.set(key, forKey: "OpenAIAPIKey")
+    }
+
+    private func loadTranscriptionModel() {
+        if let stored = UserDefaults.standard.string(forKey: modelDefaultsKey) {
+            transcriptionModel = stored
+        } else {
+            transcriptionModel = "whisper-1"
+        }
+    }
+
+    func setTranscriptionModel(_ model: String) {
+        transcriptionModel = model
+        UserDefaults.standard.set(model, forKey: modelDefaultsKey)
+        logInfo("Transcription model set to: \(model)")
     }
     
     func checkAccessibilityPermission(shouldPrompt: Bool = false) {
@@ -244,7 +261,7 @@ class TranscriptionManager: ObservableObject {
         // Add model parameter
         data.append("--\(boundary)\r\n".data(using: .utf8)!)
         data.append("Content-Disposition: form-data; name=\"model\"\r\n\r\n".data(using: .utf8)!)
-        data.append("whisper-1\r\n".data(using: .utf8)!)
+        data.append("\(transcriptionModel)\r\n".data(using: .utf8)!)
         
         // Add temperature parameter for stability
         data.append("--\(boundary)\r\n".data(using: .utf8)!)

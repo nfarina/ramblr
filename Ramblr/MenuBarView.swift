@@ -80,6 +80,19 @@ struct MenuBarView: View {
                 
                 Divider().padding(.top, 5).padding(.bottom, 8)
 
+                // Transcription model selector
+                Picker("Model:", selection: Binding(
+                    get: { transcriptionManager.transcriptionModel },
+                    set: { transcriptionManager.setTranscriptionModel($0) }
+                )) {
+                    Text("Whisper").tag("whisper-1")
+                    Text("GPT-4o").tag("gpt-4o-transcribe")
+                    Text("GPT-4o mini").tag("gpt-4o-mini-transcribe")
+                }
+                .pickerStyle(.segmented)
+
+                Divider().padding(.top, 6)
+
                 Toggle(isOn: $autoPasteEnabled) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Auto-paste into active app")
