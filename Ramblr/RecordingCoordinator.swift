@@ -1,10 +1,12 @@
 import SwiftUI
+import Combine
 
 class RecordingCoordinator: ObservableObject {
     private var audioManager: AudioManager
     private var transcriptionManager: TranscriptionManager
     private var notificationObserver: NSObjectProtocol?
     private var lastRecordingURL: URL? // Store the last recording URL for retry
+    private var cancellables = Set<AnyCancellable>()
     
     @Published var transcriptionStatus: String = ""
     
@@ -15,6 +17,11 @@ class RecordingCoordinator: ObservableObject {
         
         // Connect TranscriptionManager to AudioManager for network stress reporting
         self.transcriptionManager.setAudioManager(audioManager)
+        
+        // Observe audio levels for waveform indicator
+        self.audioManager.$audioLevels.sink { levels in
+            WaveformIndicatorWindow.shared.updateAudioLevels(levels)
+        }.store(in: &cancellables)
         
         // Observe status message updates
         NotificationCenter.default.addObserver(
@@ -66,6 +73,10 @@ class RecordingCoordinator: ObservableObject {
     func cancelRecording() {
         guard audioManager.isRecording else { return }
         logInfo("RecordingCoordinator: Cancelling recording at user request")
+        
+        // Hide waveform indicator
+        WaveformIndicatorWindow.shared.hide()
+        
         if let url = audioManager.stopRecording() {
             // Move the file next to the default recording file as cancelled.wav
             let dir = url.deletingLastPathComponent()
@@ -94,6 +105,10 @@ class RecordingCoordinator: ObservableObject {
         
         if audioManager.isRecording {
             logInfo("RecordingCoordinator: Stopping recording...")
+            
+            // Hide waveform indicator
+            WaveformIndicatorWindow.shared.hide()
+            
             if let recordingURL = audioManager.stopRecording() {
                 logInfo("RecordingCoordinator: Got recording URL: \(recordingURL)")
                 self.lastRecordingURL = recordingURL // Save for potential retry
@@ -119,6 +134,9 @@ class RecordingCoordinator: ObservableObject {
         } else {
             logInfo("RecordingCoordinator: Starting recording...")
             audioManager.startRecording()
+            
+            // Show waveform indicator
+            WaveformIndicatorWindow.shared.show()
         }
     }
     

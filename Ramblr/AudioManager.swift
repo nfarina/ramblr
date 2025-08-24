@@ -4,6 +4,7 @@ import AppKit
 
 class AudioManager: NSObject, ObservableObject {
     @Published var isRecording = false
+    @Published var audioLevels: [Float] = []
     private var audioEngine: AVAudioEngine?
     private var inputNode: AVAudioInputNode?
     private var audioFile: AVAudioFile?
@@ -130,6 +131,9 @@ class AudioManager: NSObject, ObservableObject {
                       let recordingURL = self.recordingURL,
                       self.isRecording else { return }
                 
+                // Extract audio levels for waveform visualization
+                self.extractAudioLevels(buffer)
+                
                 // Analyze audio buffer for silence
                 self.analyzeSilence(buffer)
                 
@@ -226,6 +230,34 @@ class AudioManager: NSObject, ObservableObject {
         }
     }
     
+    private func extractAudioLevels(_ buffer: AVAudioPCMBuffer) {
+        guard let channelData = buffer.floatChannelData?[0] else { return }
+        let frameLength = Int(buffer.frameLength)
+        
+        // Calculate RMS (root mean square) for audio level
+        var sum: Float = 0
+        for i in 0..<frameLength {
+            let sample = channelData[i]
+            sum += sample * sample
+        }
+        let rms = sqrt(sum / Float(frameLength))
+        
+        // Apply threshold to reduce noise during silence
+        let threshold: Float = 0.002 // Slightly higher threshold to reduce sensitivity
+        let level = rms > threshold ? min(1.0, rms * 30) : 0.02 // Balanced scaling, minimal baseline
+        
+        // Update levels on main thread for UI
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            
+            // Keep a rolling buffer for visualization with slightly slower updates
+            if self.audioLevels.count >= 15 {
+                self.audioLevels.removeFirst()
+            }
+            self.audioLevels.append(level)
+        }
+    }
+    
     private func analyzeSilence(_ buffer: AVAudioPCMBuffer) {
         guard let channelData = buffer.floatChannelData?[0] else { return }
         let frameLength = Int(buffer.frameLength)
@@ -278,6 +310,12 @@ class AudioManager: NSObject, ObservableObject {
     
     func startRecording() {
         logInfo("AudioManager: Starting recording")
+        
+        // Initialize with full buffer of baseline levels to avoid left-to-right fill
+        DispatchQueue.main.async { [weak self] in
+            self?.audioLevels = Array(repeating: 0.02, count: 10)
+        }
+        
         audioQueue.async { [weak self] in
             guard let self = self else { return }
             
@@ -322,6 +360,11 @@ class AudioManager: NSObject, ObservableObject {
         
         // First mark as not recording to prevent new audio data from being processed
         isRecording = false
+        
+        // Clear audio levels
+        DispatchQueue.main.async { [weak self] in
+            self?.audioLevels.removeAll()
+        }
         
         // Synchronously stop audio processing and close file
         audioQueue.sync { [weak self] in
