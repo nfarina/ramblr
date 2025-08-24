@@ -7,8 +7,11 @@ struct MenuBarView: View {
     @ObservedObject var transcriptionManager: TranscriptionManager
     @ObservedObject var coordinator: RecordingCoordinator
     @State private var apiKey: String = UserDefaults.standard.string(forKey: "OpenAIAPIKey") ?? ""
+    @State private var groqApiKey: String = UserDefaults.standard.string(forKey: "GroqAPIKey") ?? ""
     @State private var autoPasteEnabled: Bool = (UserDefaults.standard.object(forKey: "AutoPasteEnabled") as? Bool) ?? false
     @State private var showHotkeyChangePopover: Bool = false
+    @State private var showCancelHotkeyChangePopover: Bool = false
+    
     
     init(audioManager: AudioManager, hotkeyManager: HotkeyManager, transcriptionManager: TranscriptionManager, coordinator: RecordingCoordinator) {
         self.audioManager = audioManager
@@ -48,6 +51,7 @@ struct MenuBarView: View {
                 } else if !transcriptionManager.statusMessage.isEmpty {
                     Text(transcriptionManager.statusMessage)
                         .foregroundColor(.orange)
+                        .opacity(0.6)
                 } else {
                     Text("Ready")
                         .foregroundColor(.primary)
@@ -67,29 +71,54 @@ struct MenuBarView: View {
             Divider().padding(.top, 6)
             
             VStack(alignment: .leading, spacing: 8) {
-                // Inline API key row
+                // OpenAI key row
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text("OpenAI API Key:")
-                    SecureField("Enter API Key", text: $apiKey)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .onChange(of: apiKey) { oldValue, newValue in
+                    Spacer()
+                    Button(apiKey.isEmpty ? "Set" : "Edit") {
+                        KeyEntryPanel.shared.show(title: "OpenAI API Key", initialValue: apiKey) { newValue in
+                            apiKey = newValue
                             transcriptionManager.setAPIKey(newValue)
-                            logInfo("API Key updated")
+                            logInfo("OpenAI API Key updated")
                         }
+                    }
                 }
+                // Groq key row
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text("Groq API Key:")
+                    Spacer()
+                    Button(groqApiKey.isEmpty ? "Set" : "Edit") {
+                        KeyEntryPanel.shared.show(title: "Groq API Key", initialValue: groqApiKey) { newValue in
+                            groqApiKey = newValue
+                            transcriptionManager.setGroqAPIKey(newValue)
+                            logInfo("Groq API Key updated")
+                        }
+                    }
+                }
+                Text("Groq recommended — much faster.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .padding(.top, -4)
                 
                 Divider().padding(.top, 5).padding(.bottom, 8)
 
-                // Transcription model selector
+                // Transcription model selector (now dropdown for more options)
                 Picker("Model:", selection: Binding(
                     get: { transcriptionManager.transcriptionModel },
-                    set: { transcriptionManager.setTranscriptionModel($0) }
+                    set: { newValue in
+                        transcriptionManager.setTranscriptionModel(newValue)
+                        // Force view state to refresh binding immediately
+                        // by triggering a trivial state change
+                        self.autoPasteEnabled = self.autoPasteEnabled
+                    }
                 )) {
-                    Text("Whisper").tag("whisper-1")
-                    Text("GPT-4o").tag("gpt-4o-transcribe")
-                    Text("GPT-4o mini").tag("gpt-4o-mini-transcribe")
+                    // Provider-prefixed unique tags
+                    Text("Whisper (OpenAI)").tag("openai:whisper-1")
+                    Text("Whisper (Groq)").tag("groq:whisper-large-v3")
+                    Text("GPT-4o").tag("openai:gpt-4o-transcribe")
+                    Text("GPT-4o mini").tag("openai:gpt-4o-mini-transcribe")
                 }
-                .pickerStyle(.segmented)
+                .pickerStyle(.menu)
 
                 Divider().padding(.top, 6)
 
@@ -148,7 +177,8 @@ struct MenuBarView: View {
                     .buttonStyle(.borderless)
                 }
             }
-            HStack(spacing: 6) {
+            // Hotkey hints and change links
+            VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 4) {
                     Text("Press")
                     Text(hotkeyManager.displayString)
@@ -174,6 +204,38 @@ struct MenuBarView: View {
                                     showHotkeyChangePopover = false
                                 },
                                 onCancel: { showHotkeyChangePopover = false }
+                            )
+                            .frame(width: 200, height: 0)
+                        }
+                        .padding(8)
+                        .padding(.top, 6)
+                    }
+                }
+                HStack(spacing: 4) {
+                    Text("Press")
+                    Text(hotkeyManager.cancelDisplayString)
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundColor(.secondary)
+                    Text("to cancel recording.")
+                    Button(action: { showCancelHotkeyChangePopover = true }) {
+                        Text("Change").underline()
+                    }
+                    .buttonStyle(.plain)
+                    .popover(isPresented: $showCancelHotkeyChangePopover, arrowEdge: .top) {
+                        VStack(spacing: 6) {
+                            Text("Press desired shortcut")
+                                .font(.headline)
+                            Text("Include modifiers like ⌘ ⌥ ⌃ ⇧")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .font(.subheadline)
+                            KeyCaptureRepresentable(
+                                onCaptured: { keyCode, flags in
+                                    let carbonMods = HotkeyManager.carbonFlags(from: flags)
+                                    hotkeyManager.updateCancelHotkey(keyCode: UInt32(keyCode), modifiers: carbonMods)
+                                    showCancelHotkeyChangePopover = false
+                                },
+                                onCancel: { showCancelHotkeyChangePopover = false }
                             )
                             .frame(width: 200, height: 0)
                         }
@@ -249,8 +311,13 @@ struct MenuBarView: View {
             // Refresh accessibility status whenever the menu opens
             transcriptionManager.checkAccessibilityPermission(shouldPrompt: false)
         }
+        // Detached panel used instead of sheets for key entry (prevents menu dismissal)
     }
 }
+
+// MARK: - Key Edit Sheet
+
+// Old in-menu sheet removed in favor of detached NSPanel (KeyEntryPanel)
 
 // NSView-based key capture to reliably receive keyDown with modifiers
 private struct KeyCaptureRepresentable: NSViewRepresentable {

@@ -39,8 +39,10 @@ class TranscriptionManager: ObservableObject {
     @Published var statusMessage = ""
     @Published var history: [String] = []
     private var apiKey: String?
+    private var groqApiKey: String?
     private let modelDefaultsKey = "TranscriptionModel"
-    private(set) var transcriptionModel: String = "whisper-1"
+    // Provider-prefixed model id, e.g. "openai:whisper-1", "groq:whisper-large-v3"
+    @Published private(set) var transcriptionModel: String = "openai:whisper-1"
     
     // Retry configuration
     private let maxRetries = 3
@@ -52,6 +54,7 @@ class TranscriptionManager: ObservableObject {
     init(audioManager: AudioManager? = nil) {
         self.audioManager = audioManager
         loadAPIKey()
+        loadGroqAPIKey()
         loadHistory()
         loadTranscriptionModel()
         // Do not prompt on startup unless auto-paste is enabled
@@ -77,11 +80,27 @@ class TranscriptionManager: ObservableObject {
         UserDefaults.standard.set(key, forKey: "OpenAIAPIKey")
     }
 
+    private func loadGroqAPIKey() {
+        groqApiKey = UserDefaults.standard.string(forKey: "GroqAPIKey")
+    }
+    
+    func setGroqAPIKey(_ key: String) {
+        groqApiKey = key
+        UserDefaults.standard.set(key, forKey: "GroqAPIKey")
+    }
+
     private func loadTranscriptionModel() {
         if let stored = UserDefaults.standard.string(forKey: modelDefaultsKey) {
-            transcriptionModel = stored
+            // Migrate old values without provider prefix
+            if stored.hasPrefix("openai:") || stored.hasPrefix("groq:") {
+                transcriptionModel = stored
+            } else if stored == "whisper-1" || stored == "gpt-4o-transcribe" || stored == "gpt-4o-mini-transcribe" {
+                transcriptionModel = "openai:\(stored)"
+            } else {
+                transcriptionModel = "openai:whisper-1"
+            }
         } else {
-            transcriptionModel = "whisper-1"
+            transcriptionModel = "openai:whisper-1"
         }
     }
 
@@ -224,10 +243,18 @@ class TranscriptionManager: ObservableObject {
             self.isTranscribing = true
         }
         
-        let url = URL(string: "https://api.openai.com/v1/audio/transcriptions")!
+        // Determine provider and model name
+        let parts = transcriptionModel.split(separator: ":", maxSplits: 1, omittingEmptySubsequences: false)
+        let provider = parts.count == 2 ? String(parts[0]) : "openai"
+        let modelNameRaw = parts.count == 2 ? String(parts[1]) : transcriptionModel
+        let useGroq = (provider == "groq") && (groqApiKey?.isEmpty == false)
+        // Groq uses OpenAI-compatible path under /openai
+        let baseURL = useGroq ? "https://api.groq.com/openai" : "https://api.openai.com"
+        let url = URL(string: "\(baseURL)/v1/audio/transcriptions")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        let authKey = useGroq ? (groqApiKey ?? "") : (apiKey ?? "")
+        request.setValue("Bearer \(authKey)", forHTTPHeaderField: "Authorization")
         
         // Set timeout
         request.timeoutInterval = requestTimeout
@@ -261,7 +288,12 @@ class TranscriptionManager: ObservableObject {
         // Add model parameter
         data.append("--\(boundary)\r\n".data(using: .utf8)!)
         data.append("Content-Disposition: form-data; name=\"model\"\r\n\r\n".data(using: .utf8)!)
-        data.append("\(transcriptionModel)\r\n".data(using: .utf8)!)
+        // Groq expects whisper-large-v3; OpenAI accepts whisper-1 or gpt-4o(-mini)-transcribe
+        let modelForAPI: String = {
+            if useGroq { return "whisper-large-v3" }
+            return modelNameRaw
+        }()
+        data.append("\(modelForAPI)\r\n".data(using: .utf8)!)
         
         // Add temperature parameter for stability
         data.append("--\(boundary)\r\n".data(using: .utf8)!)

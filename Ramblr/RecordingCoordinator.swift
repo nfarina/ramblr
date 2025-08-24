@@ -33,6 +33,15 @@ class RecordingCoordinator: ObservableObject {
             logDebug("RecordingCoordinator: Received hotkey notification")
             self?.toggleRecording()
         }
+        // Observe cancel hotkey
+        NotificationCenter.default.addObserver(
+            forName: NSNotification.Name("CancelHotkeyPressed"),
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            logDebug("RecordingCoordinator: Received cancel hotkey notification")
+            self?.cancelRecording()
+        }
     }
     
     @objc private func updateTranscriptionStatus(_ notification: Notification) {
@@ -58,9 +67,17 @@ class RecordingCoordinator: ObservableObject {
         guard audioManager.isRecording else { return }
         logInfo("RecordingCoordinator: Cancelling recording at user request")
         if let url = audioManager.stopRecording() {
-            // Discard the recorded file
-            try? FileManager.default.removeItem(at: url)
-            logInfo("RecordingCoordinator: Discarded recording file \(url.lastPathComponent)")
+            // Move the file next to the default recording file as cancelled.wav
+            let dir = url.deletingLastPathComponent()
+            let destURL = dir.appendingPathComponent("cancelled.wav")
+            // Remove existing cancelled.wav if present
+            try? FileManager.default.removeItem(at: destURL)
+            do {
+                try FileManager.default.moveItem(at: url, to: destURL)
+                logInfo("RecordingCoordinator: Saved cancelled recording to \(destURL.path)")
+            } catch {
+                logError("RecordingCoordinator: Failed to move cancelled recording: \(error)")
+            }
         }
         DispatchQueue.main.async {
             self.transcriptionManager.statusMessage = "Recording cancelled"
@@ -113,9 +130,10 @@ class RecordingCoordinator: ObservableObject {
             guard let self = self else { return }
             
             if let text = text {
-                logInfo("RecordingCoordinator: Received transcription: \(text)")
-                logInfo("Transcription successful: \(text.prefix(50))...")
-                self.transcriptionManager.handleTranscriptionOutput(text)
+                let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                logInfo("RecordingCoordinator: Received transcription: \(trimmed)")
+                logInfo("Transcription successful: \(trimmed.prefix(50))...")
+                self.transcriptionManager.handleTranscriptionOutput(trimmed)
             } else {
                 logError("RecordingCoordinator: Transcription failed after retries")
                 DispatchQueue.main.async {

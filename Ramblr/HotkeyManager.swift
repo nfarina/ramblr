@@ -4,23 +4,32 @@ import Cocoa
 
 class HotkeyManager: ObservableObject {
     private var eventHandler: EventHandlerRef?
-    private var hotKeyRef: EventHotKeyRef?
+    private var startStopHotKeyRef: EventHotKeyRef?
+    private var cancelHotKeyRef: EventHotKeyRef?
     
     // Persisted hotkey configuration
     @Published private(set) var keyCode: UInt32
     @Published private(set) var modifiers: UInt32
+    @Published private(set) var cancelKeyCode: UInt32
+    @Published private(set) var cancelModifiers: UInt32
     
     private let keyCodeDefaultsKey = "HotkeyKeyCode"
     private let modifiersDefaultsKey = "HotkeyModifiers"
+    private let cancelKeyCodeDefaultsKey = "CancelHotkeyKeyCode"
+    private let cancelModifiersDefaultsKey = "CancelHotkeyModifiers"
     
     init() {
         logInfo("HotkeyManager: Initializing")
-        // Load persisted hotkey or default to Option+D
+        // Load persisted hotkeys or defaults: Option+D (start/stop), Option+C (cancel)
         let storedKeyCode = UserDefaults.standard.object(forKey: keyCodeDefaultsKey) as? Int
         let storedModifiers = UserDefaults.standard.object(forKey: modifiersDefaultsKey) as? UInt32
         self.keyCode = UInt32(storedKeyCode ?? Int(kVK_ANSI_D))
         self.modifiers = storedModifiers ?? UInt32(optionKey)
-        setupHotkey(keyCode: keyCode, modifiers: modifiers)
+        let storedCancelKeyCode = UserDefaults.standard.object(forKey: cancelKeyCodeDefaultsKey) as? Int
+        let storedCancelModifiers = UserDefaults.standard.object(forKey: cancelModifiersDefaultsKey) as? UInt32
+        self.cancelKeyCode = UInt32(storedCancelKeyCode ?? Int(kVK_ANSI_C))
+        self.cancelModifiers = storedCancelModifiers ?? UInt32(optionKey)
+        setupHotkeys()
         
         // Register for workspace notifications to handle sleep/wake
         NSWorkspace.shared.notificationCenter.addObserver(
@@ -31,9 +40,9 @@ class HotkeyManager: ObservableObject {
         )
     }
     
-    private func setupHotkey(keyCode: UInt32, modifiers: UInt32) {
-        // Clean up any existing handlers
-        cleanupHotkey()
+    private func setupHotkeys() {
+        // Clean up any existing handlers and hotkeys
+        cleanupHotkeys()
         
         var gMyHotKeyID = EventHotKeyID()
         
@@ -46,9 +55,8 @@ class HotkeyManager: ObservableObject {
                        UInt32(scalars[scalars.index(scalars.startIndex, offsetBy: 3)].value)
         
         gMyHotKeyID.signature = FourCharCode(signature)
-        gMyHotKeyID.id = UInt32(1)
         
-        // Install handler
+        // Install handler (one handler for both hotkeys)
         var eventType = EventTypeSpec()
         eventType.eventClass = OSType(kEventClassKeyboard)
         eventType.eventKind = OSType(kEventHotKeyPressed)
@@ -70,6 +78,11 @@ class HotkeyManager: ObservableObject {
                         logDebug("HotkeyManager: Hotkey pressed")
                         NotificationCenter.default.post(name: NSNotification.Name("HotkeyPressed"), object: nil)
                     }
+                } else if hotKeyID.id == 2 {
+                    DispatchQueue.main.async {
+                        logDebug("HotkeyManager: Cancel hotkey pressed")
+                        NotificationCenter.default.post(name: NSNotification.Name("CancelHotkeyPressed"), object: nil)
+                    }
                 }
                 return noErr
             },
@@ -84,28 +97,42 @@ class HotkeyManager: ObservableObject {
             return
         }
         
-        // Register the configured hotkey
-        let registerStatus = RegisterEventHotKey(
+        // Register Start/Stop hotkey (id 1)
+        gMyHotKeyID.id = UInt32(1)
+        let registerStart = RegisterEventHotKey(
             keyCode,
             modifiers,
             gMyHotKeyID,
             GetApplicationEventTarget(),
             0,
-            &hotKeyRef
+            &startStopHotKeyRef
         )
-        
-        if registerStatus != noErr {
-            logError("HotkeyManager: Failed to register hotkey")
-        } else {
-            logInfo("HotkeyManager: Successfully registered hotkey: \(displayString)")
-        }
+        if registerStart != noErr { logError("HotkeyManager: Failed to register start/stop hotkey") }
+        else { logInfo("HotkeyManager: Registered start/stop hotkey: \(displayString)") }
+
+        // Register Cancel hotkey (id 2)
+        gMyHotKeyID.id = UInt32(2)
+        let registerCancel = RegisterEventHotKey(
+            cancelKeyCode,
+            cancelModifiers,
+            gMyHotKeyID,
+            GetApplicationEventTarget(),
+            0,
+            &cancelHotKeyRef
+        )
+        if registerCancel != noErr { logError("HotkeyManager: Failed to register cancel hotkey") }
+        else { logInfo("HotkeyManager: Registered cancel hotkey: \(cancelDisplayString)") }
     }
     
-    private func cleanupHotkey() {
+    private func cleanupHotkeys() {
         logDebug("HotkeyManager: Cleaning up hotkey resources")
-        if let hotKeyRef = hotKeyRef {
-            UnregisterEventHotKey(hotKeyRef)
-            self.hotKeyRef = nil
+        if let ref = startStopHotKeyRef {
+            UnregisterEventHotKey(ref)
+            self.startStopHotKeyRef = nil
+        }
+        if let ref = cancelHotKeyRef {
+            UnregisterEventHotKey(ref)
+            self.cancelHotKeyRef = nil
         }
         
         if let eventHandler = eventHandler {
@@ -116,12 +143,12 @@ class HotkeyManager: ObservableObject {
     
     @objc private func handleWake() {
         logInfo("HotkeyManager: System woke from sleep, reinstalling hotkey")
-        setupHotkey(keyCode: keyCode, modifiers: modifiers)
+        setupHotkeys()
     }
     
     deinit {
         logInfo("HotkeyManager: Deinitializing")
-        cleanupHotkey()
+        cleanupHotkeys()
         NSWorkspace.shared.notificationCenter.removeObserver(self)
     }
 
@@ -133,12 +160,27 @@ class HotkeyManager: ObservableObject {
         self.modifiers = modifiers
         UserDefaults.standard.set(Int(keyCode), forKey: keyCodeDefaultsKey)
         UserDefaults.standard.set(modifiers, forKey: modifiersDefaultsKey)
-        setupHotkey(keyCode: keyCode, modifiers: modifiers)
+        setupHotkeys()
+    }
+    
+    func updateCancelHotkey(keyCode: UInt32, modifiers: UInt32) {
+        logInfo("HotkeyManager: Updating cancel hotkey")
+        self.cancelKeyCode = keyCode
+        self.cancelModifiers = modifiers
+        UserDefaults.standard.set(Int(keyCode), forKey: cancelKeyCodeDefaultsKey)
+        UserDefaults.standard.set(modifiers, forKey: cancelModifiersDefaultsKey)
+        setupHotkeys()
     }
     
     var displayString: String {
         let symbols = Self.symbols(forCarbonModifiers: modifiers)
         let key = Self.keyName(fromKeyCode: keyCode) ?? "KeyCode \(keyCode)"
+        return symbols + key
+    }
+    
+    var cancelDisplayString: String {
+        let symbols = Self.symbols(forCarbonModifiers: cancelModifiers)
+        let key = Self.keyName(fromKeyCode: cancelKeyCode) ?? "KeyCode \(cancelKeyCode)"
         return symbols + key
     }
     
