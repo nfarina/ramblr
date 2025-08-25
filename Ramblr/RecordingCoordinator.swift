@@ -106,9 +106,6 @@ class RecordingCoordinator: ObservableObject {
         if audioManager.isRecording {
             logInfo("RecordingCoordinator: Stopping recording...")
             
-            // Hide waveform indicator
-            WaveformIndicatorWindow.shared.hide()
-            
             if let recordingURL = audioManager.stopRecording() {
                 logInfo("RecordingCoordinator: Got recording URL: \(recordingURL)")
                 self.lastRecordingURL = recordingURL // Save for potential retry
@@ -118,25 +115,30 @@ class RecordingCoordinator: ObservableObject {
                 if let fileSize = try? FileManager.default.attributesOfItem(atPath: recordingURL.path)[.size] as? Int64 {
                     logInfo("RecordingCoordinator: Recording file size: \(fileSize) bytes")
                     if fileSize > 0 {
+                        // Switch to transcribing mode
+                        WaveformIndicatorWindow.shared.showTranscribing()
                         transcribeAudio(recordingURL: recordingURL)
                     } else {
                         logError("RecordingCoordinator: Recording file is empty")
+                        WaveformIndicatorWindow.shared.hide()
                         showRecordingError()
                     }
                 } else {
                     logError("RecordingCoordinator: Could not get recording file size")
+                    WaveformIndicatorWindow.shared.hide()
                     showRecordingError()
                 }
             } else {
                 // Don't show an error - this is likely an intentionally short or silent recording
                 logInfo("RecordingCoordinator: Recording was too short or silent")
+                WaveformIndicatorWindow.shared.hide()
             }
         } else {
             logInfo("RecordingCoordinator: Starting recording...")
             audioManager.startRecording()
             
             // Show waveform indicator
-            WaveformIndicatorWindow.shared.show()
+            WaveformIndicatorWindow.shared.showWaveform()
         }
     }
     
@@ -151,9 +153,13 @@ class RecordingCoordinator: ObservableObject {
                 let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
                 logInfo("RecordingCoordinator: Received transcription: \(trimmed)")
                 logInfo("Transcription successful: \(trimmed.prefix(50))...")
+                // Hide indicator on successful transcription
+                WaveformIndicatorWindow.shared.hide()
                 self.transcriptionManager.handleTranscriptionOutput(trimmed)
             } else {
                 logError("RecordingCoordinator: Transcription failed after retries")
+                // Hide indicator on failed transcription
+                WaveformIndicatorWindow.shared.hide()
                 DispatchQueue.main.async {
                     self.showTranscriptionErrorWithOptions(recordingURL: recordingURL)
                 }

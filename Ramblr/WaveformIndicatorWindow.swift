@@ -1,11 +1,17 @@
 import SwiftUI
 import AppKit
 
+enum IndicatorMode {
+    case waveform
+    case transcribing
+}
+
 final class WaveformIndicatorWindow: ObservableObject {
     static let shared = WaveformIndicatorWindow()
     private var window: NSPanel?
     private var hostingController: NSHostingController<WaveformIndicatorView>?
     private var waveformModel = WaveformModel()
+    @Published var mode: IndicatorMode = .waveform
     
     private init() {}
     
@@ -15,7 +21,7 @@ final class WaveformIndicatorWindow: ObservableObject {
             return
         }
         
-        let waveformView = WaveformIndicatorView(model: waveformModel) {
+        let waveformView = WaveformIndicatorView(model: waveformModel, windowModel: self) {
             // Click handler to open menu bar menu
             self.openMenuBarMenu()
         }
@@ -45,13 +51,29 @@ final class WaveformIndicatorWindow: ObservableObject {
     }
     
     func hide() {
-        window?.orderOut(nil)
-        window = nil
-        hostingController = nil
+        DispatchQueue.main.async { [weak self] in
+            self?.window?.orderOut(nil)
+            self?.window = nil
+            self?.hostingController = nil
+        }
     }
     
     func updateAudioLevels(_ levels: [Float]) {
         waveformModel.updateLevels(levels)
+    }
+    
+    func showWaveform() {
+        DispatchQueue.main.async { [weak self] in
+            self?.mode = .waveform
+            self?.show()
+        }
+    }
+    
+    func showTranscribing() {
+        DispatchQueue.main.async { [weak self] in
+            self?.mode = .transcribing
+            self?.show()
+        }
     }
     
     private func openMenuBarMenu() {
@@ -67,8 +89,51 @@ final class WaveformIndicatorWindow: ObservableObject {
     }
 }
 
+private struct PulsingDotsView: View {
+    @State private var pulse1 = false
+    @State private var pulse2 = false
+    @State private var pulse3 = false
+    
+    var body: some View {
+        HStack(spacing: 4) {
+            Circle()
+                .fill(Color.white.opacity(pulse1 ? 1.0 : 0.3))
+                .frame(width: 4, height: 4)
+                .animation(.easeInOut(duration: 0.6).repeatForever(), value: pulse1)
+            
+            Circle()
+                .fill(Color.white.opacity(pulse2 ? 1.0 : 0.3))
+                .frame(width: 4, height: 4)
+                .animation(.easeInOut(duration: 0.6).repeatForever(), value: pulse2)
+            
+            Circle()
+                .fill(Color.white.opacity(pulse3 ? 1.0 : 0.3))
+                .frame(width: 4, height: 4)
+                .animation(.easeInOut(duration: 0.6).repeatForever(), value: pulse3)
+        }
+        .onAppear {
+            // Start animations with staggered timing
+            pulse1 = true
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                pulse2 = true
+            }
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                pulse3 = true
+            }
+        }
+        .onDisappear {
+            pulse1 = false
+            pulse2 = false
+            pulse3 = false
+        }
+    }
+}
+
 private struct WaveformIndicatorView: View {
     @ObservedObject var model: WaveformModel
+    @ObservedObject var windowModel: WaveformIndicatorWindow
     let onTap: () -> Void
     
     var body: some View {
@@ -78,9 +143,17 @@ private struct WaveformIndicatorView: View {
                 .fill(Color.black.opacity(0.8))
                 .frame(width: 60, height: 20)
             
-            // Waveform content
-            WaveformView(model: model)
-                .frame(width: 50, height: 12)
+            // Content based on mode
+            Group {
+                switch windowModel.mode {
+                case .waveform:
+                    WaveformView(model: model)
+                        .frame(width: 50, height: 12)
+                case .transcribing:
+                    PulsingDotsView()
+                        .frame(width: 50, height: 12)
+                }
+            }
         }
         .onTapGesture {
             onTap()
