@@ -12,6 +12,7 @@ final class WaveformIndicatorWindow: ObservableObject {
     private var hostingController: NSHostingController<WaveformIndicatorView>?
     private var waveformModel = WaveformModel()
     @Published var mode: IndicatorMode = .waveform
+    @Published var opacity: Double = 0.0
     
     private init() {}
     
@@ -47,14 +48,32 @@ final class WaveformIndicatorWindow: ObservableObject {
         }
         
         self.window = panel
+        
+        // Start with opacity 0 and fade in
+        opacity = 0.0
         panel.orderFront(nil)
+        
+        // Animate fade in
+        withAnimation(.easeOut(duration: 0.2)) {
+            opacity = 1.0
+        }
     }
     
     func hide() {
         DispatchQueue.main.async { [weak self] in
-            self?.window?.orderOut(nil)
-            self?.window = nil
-            self?.hostingController = nil
+            guard let self = self else { return }
+            
+            // Animate fade out
+            withAnimation(.easeIn(duration: 0.1)) {
+                self.opacity = 0.0
+            }
+            
+            // Hide window after animation completes
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                self.window?.orderOut(nil)
+                self.window = nil
+                self.hostingController = nil
+            }
         }
     }
     
@@ -155,6 +174,7 @@ private struct WaveformIndicatorView: View {
                 }
             }
         }
+        .opacity(windowModel.opacity)
         .onTapGesture {
             onTap()
         }
