@@ -176,6 +176,20 @@ class TranscriptionManager: ObservableObject {
                     // Log the error
                     logError("Transcription attempt \(currentRetry + 1) failed: \(error.description)")
                     
+                    // Do not retry if we are missing API credentials
+                    if case .noAPIKey = error {
+                        DispatchQueue.main.async {
+                            self.statusMessage = "Add your API key in Settings"
+                            NotificationCenter.default.post(
+                                name: NSNotification.Name("TranscriptionStatusChanged"),
+                                object: nil,
+                                userInfo: ["status": "Add your API key in Settings"]
+                            )
+                        }
+                        completion(nil)
+                        return
+                    }
+                    
                     // Check if we can retry
                     if currentRetry < self.maxRetries {
                         currentRetry += 1
@@ -233,8 +247,18 @@ class TranscriptionManager: ObservableObject {
     
     // Core request logic extracted to a separate method
     private func performTranscriptionRequest(audioURL: URL, completion: @escaping (Result<String, TranscriptionError>) -> Void) {
-        guard let apiKey = apiKey else {
-            logError("Transcription error: No API key provided")
+        // Determine provider and model name
+        let parts = transcriptionModel.split(separator: ":", maxSplits: 1, omittingEmptySubsequences: false)
+        let provider = parts.count == 2 ? String(parts[0]) : "openai"
+        let modelNameRaw = parts.count == 2 ? String(parts[1]) : transcriptionModel
+        let useGroq = (provider == "groq")
+        let selectedKey = useGroq ? groqApiKey : apiKey
+        let authKey = selectedKey?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        
+        // Fail fast if the chosen provider has no key
+        guard !authKey.isEmpty else {
+            let providerName = useGroq ? "Groq" : "OpenAI"
+            logError("Transcription error: No API key provided for \(providerName)")
             completion(.failure(.noAPIKey))
             return
         }
@@ -243,17 +267,11 @@ class TranscriptionManager: ObservableObject {
             self.isTranscribing = true
         }
         
-        // Determine provider and model name
-        let parts = transcriptionModel.split(separator: ":", maxSplits: 1, omittingEmptySubsequences: false)
-        let provider = parts.count == 2 ? String(parts[0]) : "openai"
-        let modelNameRaw = parts.count == 2 ? String(parts[1]) : transcriptionModel
-        let useGroq = (provider == "groq") && (groqApiKey?.isEmpty == false)
         // Groq uses OpenAI-compatible path under /openai
         let baseURL = useGroq ? "https://api.groq.com/openai" : "https://api.openai.com"
         let url = URL(string: "\(baseURL)/v1/audio/transcriptions")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        let authKey = useGroq ? (groqApiKey ?? "") : (apiKey ?? "")
         request.setValue("Bearer \(authKey)", forHTTPHeaderField: "Authorization")
         
         // Set timeout
