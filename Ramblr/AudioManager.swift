@@ -460,8 +460,16 @@ class AudioManager: NSObject, ObservableObject {
                 }
             }
             
+            if downsampledBuffer.isEmpty {
+                logError("AudioManager: Downsampled buffer is empty; skipping compression")
+                return
+            }
+            
             // Create audio format
-            let format = AVAudioFormat(settings: settings)!
+            guard let format = AVAudioFormat(settings: settings) else {
+                logError("AudioManager: Failed to create audio format for compression (sample rate \(targetSampleRate))")
+                return
+            }
             
             // Create PCM buffer
             guard let pcmBuffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(downsampledBuffer.count)) else {
