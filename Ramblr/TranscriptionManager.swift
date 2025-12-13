@@ -57,15 +57,13 @@ class TranscriptionManager: ObservableObject {
         loadGroqAPIKey()
         loadHistory()
         loadTranscriptionModel()
-        // Do not prompt on startup unless auto-paste is enabled
-        let autoPasteEnabled = (UserDefaults.standard.object(forKey: "AutoPasteEnabled") as? Bool) ?? false
-        if autoPasteEnabled {
-            checkAccessibilityPermission(shouldPrompt: true)
-        } else {
-            // Update state silently without prompting
+        // Do not prompt on startup unless auto-paste is enabled (default: true)
+        // We also rely on notifications now, so we don't want to spam on launch.
+        // let autoPasteEnabled = (UserDefaults.standard.object(forKey: "AutoPasteEnabled") as? Bool) ?? true
+        // if autoPasteEnabled {
+        //    checkAccessibilityPermission(shouldPrompt: false) // Silent check only
             checkAccessibilityPermission(shouldPrompt: false)
         }
-    }
     
     func setAudioManager(_ audioManager: AudioManager) {
         self.audioManager = audioManager
@@ -116,7 +114,7 @@ class TranscriptionManager: ObservableObject {
         DispatchQueue.main.async {
             self.hasAccessibilityPermission = trusted
             if !trusted && shouldPrompt {
-                self.showAccessibilityAlert()
+                self.showAccessibilityNotification()
             }
         }
     }
@@ -421,34 +419,60 @@ class TranscriptionManager: ObservableObject {
     }
     
     func pasteText(_ text: String) {
-        logInfo("Starting text paste operation")
+        logInfo("Starting auto-paste operation")
         
         // First check if we have accessibility permission
         if !AXIsProcessTrusted() {
             logError("No accessibility permission")
             DispatchQueue.main.async {
-                self.showAccessibilityAlert()
+                self.showAccessibilityNotification()
             }
             return
         }
         
-        let script = """
-        tell application "System Events"
-            keystroke "\(text)"
-        end tell
-        """
-        
-        var error: NSDictionary?
-        if let scriptObject = NSAppleScript(source: script) {
-            scriptObject.executeAndReturnError(&error)
-            if let error = error {
-                logError("AppleScript error: \(error)")
-                // If we get an error, recheck permissions as they might have been revoked
-                DispatchQueue.main.async {
-                    self.checkAccessibilityPermission()
+        // 1. SAVE CLIPBOARD
+        let pasteboard = NSPasteboard.general
+        let savedItems = pasteboard.pasteboardItems?.map { item -> NSPasteboardItem in
+            let newItem = NSPasteboardItem()
+            for type in item.types {
+                if let data = item.data(forType: type) {
+                    newItem.setData(data, forType: type)
                 }
-            } else {
-                logInfo("Successfully typed text")
+            }
+            return newItem
+        }
+        
+        // 2. SET TRANSCRIPTION
+        pasteboard.clearContents()
+        pasteboard.setString(text, forType: .string)
+        
+        // 3. SIMULATE CMD+V
+        // Using CGEvent for reliable system-wide input
+        let source = CGEventSource(stateID: .hidSystemState)
+        
+        // 'v' key code is 9
+        let vKeyCode: CGKeyCode = 9
+        
+        let keyDown = CGEvent(keyboardEventSource: source, virtualKey: vKeyCode, keyDown: true)
+        let keyUp = CGEvent(keyboardEventSource: source, virtualKey: vKeyCode, keyDown: false)
+        
+        // Add Command modifier
+        keyDown?.flags = .maskCommand
+        keyUp?.flags = .maskCommand
+        
+        keyDown?.post(tap: .cghidEventTap)
+        keyUp?.post(tap: .cghidEventTap)
+        
+        logInfo("Simulated Command+V")
+        
+        // 4. RESTORE CLIPBOARD (Delayed)
+        // We need to wait long enough for the active application to process the paste command.
+        // 1.0s is safer to ensure we don't restore before the paste happens.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            logInfo("Restoring original clipboard content")
+            if let saved = savedItems {
+                pasteboard.clearContents()
+                pasteboard.writeObjects(saved)
             }
         }
     }
@@ -459,7 +483,7 @@ class TranscriptionManager: ObservableObject {
     /// When AutoPaste is enabled (default), the text is typed into the active app.
     /// Otherwise, the text is copied to the clipboard and a notification is shown.
     func handleTranscriptionOutput(_ text: String) {
-        let isAutoPasteEnabled = (UserDefaults.standard.object(forKey: "AutoPasteEnabled") as? Bool) ?? false
+        let isAutoPasteEnabled = (UserDefaults.standard.object(forKey: "AutoPasteEnabled") as? Bool) ?? true
         addToHistory(text)
         if isAutoPasteEnabled {
             // If auto-paste is on but we don't have permission, show prompt and fall back to copy
@@ -595,19 +619,17 @@ class TranscriptionManager: ObservableObject {
         }
     }
     
-    private func showAccessibilityAlert() {
-        DispatchQueue.main.async {
-            let alert = NSAlert()
-            alert.messageText = "Permission Required"
-            alert.informativeText = "Ramblr needs accessibility permission to simulate keyboard events. Please grant access in System Settings > Privacy & Security > Accessibility, then quit and relaunch Ramblr."
-            alert.alertStyle = .warning
-            alert.addButton(withTitle: "Open System Settings")
-            alert.addButton(withTitle: "Cancel")
-            
-            if alert.runModal() == .alertFirstButtonReturn {
-                if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
-                    NSWorkspace.shared.open(url)
-                }
+    private func showAccessibilityNotification() {
+        let content = UNMutableNotificationContent()
+        content.title = "Permission Required"
+        content.body = "Ramblr needs accessibility permission to Paste. Click here to open System Settings."
+        content.sound = .default
+        content.userInfo = ["action": "open_accessibility"]
+        
+        let request = UNNotificationRequest(identifier: "accessibility_permission", content: content, trigger: nil)
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                logError("Failed to show notification: \(error)")
             }
         }
     }
