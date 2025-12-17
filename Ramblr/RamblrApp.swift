@@ -70,17 +70,8 @@ struct RamblrApp: App {
                        transcriptionManager: transcriptionManager,
                        coordinator: coordinator)
         } label: {
-            if audioManager.isRecording {
-                Image(systemName: "record.circle.fill")
-                    .symbolRenderingMode(.multicolor)
-            } else if transcriptionManager.isTranscribing {
-                Image(systemName: "arrow.triangle.2.circlepath.circle")
-                    .symbolRenderingMode(.multicolor)
-                    .foregroundStyle(.yellow)
-            } else {
-                Image("MenuBarIcon")
-                    .renderingMode(.template)
-            }
+            Image("MenuBarIcon")
+                .renderingMode(.template)
         }
         .menuBarExtraStyle(.window)
     }
