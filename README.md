@@ -1,4 +1,5 @@
-<img width="256" height="256" alt="Rambl" src="https://github.com/user-attachments/assets/c933452f-f665-4710-b22d-ac1305d3e3b4" />
+<img width="238" height="305" alt="F01A9123-02DF-45FF-A7DB-D9DFCC01F312" src="https://github.com/user-attachments/assets/9294d9a5-3506-404b-a156-0b39d50151dc" />
+
 
 # Ramblr
 
