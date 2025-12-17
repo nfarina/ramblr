@@ -78,7 +78,8 @@ struct RamblrApp: App {
                     .symbolRenderingMode(.multicolor)
                     .foregroundStyle(.yellow)
             } else {
-                Image(systemName: "mic.circle")
+                Image("MenuBarIcon")
+                    .renderingMode(.template)
             }
         }
         .menuBarExtraStyle(.window)
