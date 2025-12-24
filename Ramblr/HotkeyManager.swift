@@ -7,6 +7,11 @@ class HotkeyManager: ObservableObject {
     private var startStopHotKeyRef: EventHotKeyRef?
     private var cancelHotKeyRef: EventHotKeyRef?
     
+    // Monitors for Fn key
+    private var globalMonitor: Any?
+    private var localMonitor: Any?
+    private var isFnKeyPressed: Bool = false
+    
     // Persisted hotkey configuration
     @Published private(set) var keyCode: UInt32
     @Published private(set) var modifiers: UInt32
@@ -43,6 +48,50 @@ class HotkeyManager: ObservableObject {
     private func setupHotkeys() {
         // Clean up any existing handlers and hotkeys
         cleanupHotkeys()
+        
+        // --- Fn Key Push-to-Talk Setup ---
+        // Monitor for flags changed (Fn key)
+        let handleFlagsChanged: (NSEvent) -> Void = { [weak self] event in
+            guard let self = self else { return }
+            
+            // Check if Fn key is pressed (NSEvent.ModifierFlags.function)
+            let isFnPressed = event.modifierFlags.contains(.function)
+            
+            // Debounce/State check
+            if isFnPressed && !self.isFnKeyPressed {
+                self.isFnKeyPressed = true
+                logDebug("HotkeyManager: Fn key pressed")
+                NotificationCenter.default.post(name: NSNotification.Name("StartRecording"), object: nil)
+            } else if !isFnPressed && self.isFnKeyPressed {
+                self.isFnKeyPressed = false
+                logDebug("HotkeyManager: Fn key released")
+                NotificationCenter.default.post(name: NSNotification.Name("StopRecording"), object: nil)
+            }
+        }
+        
+        // Global monitor (when app is in background)
+        // Note: Requires Accessibility permissions
+        let options: [String: Any] = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: false]
+        let isTrusted = AXIsProcessTrustedWithOptions(options as CFDictionary)
+        
+        if !isTrusted {
+            logError("HotkeyManager: App is not trusted for Accessibility access. Global Fn key monitoring will not work.")
+        }
+        
+        self.globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged, handler: handleFlagsChanged)
+        
+        if self.globalMonitor == nil {
+             logError("HotkeyManager: Failed to add global monitor. Accessibility permissions might be missing.")
+        } else {
+             logInfo("HotkeyManager: Global monitor added successfully.")
+        }
+        
+        // Local monitor (when app is active)
+        self.localMonitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { event in
+            handleFlagsChanged(event)
+            return event
+        }
+        // ---------------------------------
         
         var gMyHotKeyID = EventHotKeyID()
         
@@ -126,6 +175,17 @@ class HotkeyManager: ObservableObject {
     
     private func cleanupHotkeys() {
         logDebug("HotkeyManager: Cleaning up hotkey resources")
+        
+        // Remove monitors
+        if let monitor = globalMonitor {
+            NSEvent.removeMonitor(monitor)
+            globalMonitor = nil
+        }
+        if let monitor = localMonitor {
+            NSEvent.removeMonitor(monitor)
+            localMonitor = nil
+        }
+        
         if let ref = startStopHotKeyRef {
             UnregisterEventHotKey(ref)
             self.startStopHotKeyRef = nil
@@ -169,6 +229,11 @@ class HotkeyManager: ObservableObject {
         self.cancelModifiers = modifiers
         UserDefaults.standard.set(Int(keyCode), forKey: cancelKeyCodeDefaultsKey)
         UserDefaults.standard.set(modifiers, forKey: cancelModifiersDefaultsKey)
+        setupHotkeys()
+    }
+    
+    func checkPermissions() {
+        logInfo("HotkeyManager: Checking permissions and refreshing hotkeys")
         setupHotkeys()
     }
     
