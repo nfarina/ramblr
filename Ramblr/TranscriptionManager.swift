@@ -2,6 +2,7 @@ import Foundation
 import AppKit
 import CoreGraphics
 import UserNotifications
+import AVFoundation
 
 // Enumeration for transcription errors
 enum TranscriptionError: Error {
@@ -47,6 +48,8 @@ class TranscriptionManager: ObservableObject {
     // Retry configuration
     private let maxRetries = 3
     private let requestTimeout: TimeInterval = 15.0 // 15 seconds timeout as requested
+    private let maxUploadBytes = 19 * 1024 * 1024
+    private let chunkSafetyMarginBytes = 64 * 1024
     
     // Reference to AudioManager for network stress reporting
     private weak var audioManager: AudioManager?
@@ -121,128 +124,205 @@ class TranscriptionManager: ObservableObject {
         }
     }
     
-    // New method that incorporates retries
+    // New method that incorporates retries and handles file chunking
     func transcribeWithRetry(audioURL: URL, completion: @escaping (String?) -> Void) {
-        var currentRetry = 0
-        
-        // Report starting status
-        DispatchQueue.main.async {
-            self.statusMessage = "Starting transcription..."
-            
-            // Also notify any observers
-            NotificationCenter.default.post(
-                name: NSNotification.Name("TranscriptionStatusChanged"),
-                object: nil,
-                userInfo: ["status": "Starting transcription..."]
-            )
+        if shouldSplitFile(at: audioURL) {
+            splitAndTranscribe(audioURL: audioURL, completion: completion)
+            return
         }
-        
-        // Function to attempt transcription with retries
+        performTranscriptionWithRetry(audioURL: audioURL, statusPrefix: nil, completion: completion)
+    }
+    
+    // Original transcribe method now calls transcribeWithRetry
+    func transcribe(audioURL: URL, completion: @escaping (String?) -> Void) {
+        transcribeWithRetry(audioURL: audioURL, completion: completion)
+    }
+
+    private func performTranscriptionWithRetry(audioURL: URL, statusPrefix: String?, completion: @escaping (String?) -> Void) {
+        var currentRetry = 0
+        let prefix = statusPrefix.map { "\($0): " } ?? ""
+
+        updateStatus("\(prefix)Starting transcription...")
+
         func attemptTranscription() {
             logInfo("Attempting transcription (try \(currentRetry + 1) of \(self.maxRetries + 1))")
-            
-            // Update status message
+
             if currentRetry > 0 {
-                let statusMsg = "Retry \(currentRetry) of \(self.maxRetries)..."
-                DispatchQueue.main.async {
-                    self.statusMessage = statusMsg
-                    
-                    // Also notify any observers
-                    NotificationCenter.default.post(
-                        name: NSNotification.Name("TranscriptionStatusChanged"),
-                        object: nil,
-                        userInfo: ["status": statusMsg]
-                    )
-                }
+                updateStatus("\(prefix)Retry \(currentRetry) of \(self.maxRetries)...")
             }
-            
+
             self.performTranscriptionRequest(audioURL: audioURL) { result in
                 switch result {
                 case .success(let text):
-                    // Success - clear status and return text
-                    DispatchQueue.main.async {
-                        self.statusMessage = ""
-                        
-                        // Also notify any observers
-                        NotificationCenter.default.post(
-                            name: NSNotification.Name("TranscriptionStatusChanged"),
-                            object: nil,
-                            userInfo: ["status": ""]
-                        )
-                    }
+                    self.updateStatus("")
                     completion(text)
-                    
+
                 case .failure(let error):
-                    // Log the error
                     logError("Transcription attempt \(currentRetry + 1) failed: \(error.description)")
-                    
-                    // Do not retry if we are missing API credentials
+
                     if case .noAPIKey = error {
-                        DispatchQueue.main.async {
-                            self.statusMessage = "Add your API key in Settings"
-                            NotificationCenter.default.post(
-                                name: NSNotification.Name("TranscriptionStatusChanged"),
-                                object: nil,
-                                userInfo: ["status": "Add your API key in Settings"]
-                            )
-                        }
+                        self.updateStatus("Add your API key in Settings")
                         completion(nil)
                         return
                     }
-                    
-                    // Check if we can retry
+
                     if currentRetry < self.maxRetries {
                         currentRetry += 1
-                        
-                        // Report network stress to AudioManager
                         self.audioManager?.reportNetworkStress(level: currentRetry)
-                        
-                        // Calculate exponential backoff delay: 1s, 2s, 4s, etc.
                         let delay = pow(2.0, Double(currentRetry - 1))
-                        
-                        // Update status message
-                        let statusMsg = "Retry in \(Int(delay))s... (\(currentRetry)/\(self.maxRetries))"
-                        DispatchQueue.main.async {
-                            self.statusMessage = statusMsg
-                            
-                            // Also notify any observers
-                            NotificationCenter.default.post(
-                                name: NSNotification.Name("TranscriptionStatusChanged"),
-                                object: nil,
-                                userInfo: ["status": statusMsg]
-                            )
-                        }
-                        
-                        // Schedule retry with backoff
+                        self.updateStatus("\(prefix)Retry in \(Int(delay))s... (\(currentRetry)/\(self.maxRetries))")
                         DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
                             attemptTranscription()
                         }
                     } else {
-                        // No more retries
-                        DispatchQueue.main.async {
-                            self.statusMessage = ""
-                            
-                            // Also notify any observers
-                            NotificationCenter.default.post(
-                                name: NSNotification.Name("TranscriptionStatusChanged"),
-                                object: nil,
-                                userInfo: ["status": ""]
-                            )
-                        }
+                        self.updateStatus("")
                         logError("Transcription failed after \(self.maxRetries + 1) attempts")
                         completion(nil)
                     }
                 }
             }
         }
-        
-        // Start the first attempt
+
         attemptTranscription()
     }
-    
-    // Original transcribe method now calls transcribeWithRetry
-    func transcribe(audioURL: URL, completion: @escaping (String?) -> Void) {
-        transcribeWithRetry(audioURL: audioURL, completion: completion)
+
+    private func updateStatus(_ message: String) {
+        DispatchQueue.main.async {
+            self.statusMessage = message
+            NotificationCenter.default.post(
+                name: NSNotification.Name("TranscriptionStatusChanged"),
+                object: nil,
+                userInfo: ["status": message]
+            )
+        }
+    }
+
+    private func shouldSplitFile(at url: URL) -> Bool {
+        guard let fileSize = fileSize(at: url) else { return false }
+        return fileSize > Int64(maxUploadBytes)
+    }
+
+    private func splitAndTranscribe(audioURL: URL, completion: @escaping (String?) -> Void) {
+        updateStatus("Preparing large audio file...")
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self else { return }
+            do {
+                let chunkURLs = try self.splitAudioFile(audioURL: audioURL)
+                guard !chunkURLs.isEmpty else {
+                    self.updateStatus("Audio file is empty")
+                    completion(nil)
+                    return
+                }
+                logInfo("Large audio split into \(chunkURLs.count) chunks")
+                self.transcribeChunksWithRetry(chunkURLs, completion: completion)
+            } catch {
+                logError("Failed to split audio file: \(error)")
+                self.updateStatus("Failed to prepare audio for upload")
+                completion(nil)
+            }
+        }
+    }
+
+    private func transcribeChunksWithRetry(_ chunkURLs: [URL], completion: @escaping (String?) -> Void) {
+        var results: [String] = []
+
+        func finishAndCleanup(success: Bool) {
+            cleanupChunkFiles(chunkURLs)
+            if success {
+                let combined = results
+                    .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                    .filter { !$0.isEmpty }
+                    .joined(separator: " ")
+                completion(combined)
+            } else {
+                completion(nil)
+            }
+        }
+
+        func transcribeNext(index: Int) {
+            if index >= chunkURLs.count {
+                finishAndCleanup(success: true)
+                return
+            }
+
+            let statusPrefix = "Part \(index + 1) of \(chunkURLs.count)"
+            performTranscriptionWithRetry(audioURL: chunkURLs[index], statusPrefix: statusPrefix) { text in
+                guard let text = text else {
+                    finishAndCleanup(success: false)
+                    return
+                }
+                results.append(text)
+                transcribeNext(index: index + 1)
+            }
+        }
+
+        transcribeNext(index: 0)
+    }
+
+    private func splitAudioFile(audioURL: URL) throws -> [URL] {
+        let audioFile = try AVAudioFile(forReading: audioURL)
+        let format = audioFile.processingFormat
+        let streamDescription = format.streamDescription.pointee
+
+        var bytesPerFrame = Int(streamDescription.mBytesPerFrame)
+        if bytesPerFrame == 0 {
+            let bytesPerSample = Int(streamDescription.mBitsPerChannel) / 8
+            bytesPerFrame = bytesPerSample * Int(streamDescription.mChannelsPerFrame)
+        }
+        if bytesPerFrame <= 0 {
+            throw TranscriptionError.fileError("Unsupported audio format for chunking")
+        }
+
+        let maxChunkBytes = maxUploadBytes - chunkSafetyMarginBytes
+        let maxFramesPerChunk = max(1, maxChunkBytes / bytesPerFrame)
+        var chunkURLs: [URL] = []
+        var chunkIndex = 0
+
+        while audioFile.framePosition < audioFile.length {
+            let framesRemaining = audioFile.length - audioFile.framePosition
+            let framesToRead = min(AVAudioFrameCount(maxFramesPerChunk), AVAudioFrameCount(framesRemaining))
+            if framesToRead == 0 { break }
+
+            guard let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: framesToRead) else {
+                throw TranscriptionError.fileError("Failed to allocate audio buffer")
+            }
+
+            try audioFile.read(into: buffer, frameCount: framesToRead)
+            if buffer.frameLength == 0 { break }
+
+            let chunkURL = makeChunkURL(index: chunkIndex)
+            let chunkFile = try AVAudioFile(forWriting: chunkURL, settings: format.settings)
+            try chunkFile.write(from: buffer)
+
+            if let chunkSize = fileSize(at: chunkURL), chunkSize > Int64(maxUploadBytes) {
+                throw TranscriptionError.fileError("Chunk exceeded size limit")
+            }
+
+            chunkURLs.append(chunkURL)
+            chunkIndex += 1
+        }
+
+        return chunkURLs
+    }
+
+    private func makeChunkURL(index: Int) -> URL {
+        let tempDir = URL(fileURLWithPath: "/tmp", isDirectory: true)
+        let filename = "ramblr-chunk-\(UUID().uuidString)-\(index).wav"
+        return tempDir.appendingPathComponent(filename)
+    }
+
+    private func cleanupChunkFiles(_ chunkURLs: [URL]) {
+        for url in chunkURLs {
+            try? FileManager.default.removeItem(at: url)
+        }
+    }
+
+    private func fileSize(at url: URL) -> Int64? {
+        guard let attributes = try? FileManager.default.attributesOfItem(atPath: url.path),
+              let size = attributes[.size] as? Int64 else {
+            return nil
+        }
+        return size
     }
     
     // Core request logic extracted to a separate method

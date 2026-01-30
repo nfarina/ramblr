@@ -154,28 +154,43 @@ struct MenuBarView: View {
             }
             
             // Start/Stop controls
-            HStack(spacing: 8) {
-                Button(action: {
-                    coordinator.toggleRecordingFromUI()
-                }) {
-                    HStack(spacing: 6) {
-                        Image(systemName: audioManager.isRecording ? "stop.circle" : "record.circle")
-                        Text(audioManager.isRecording ? "Stop Recording" : "Start Recording")
-                    }
-                }
-                .keyboardShortcut(.defaultAction)
-
-                if audioManager.isRecording {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 8) {
                     Button(action: {
-                        coordinator.cancelRecording()
+                        coordinator.toggleRecordingFromUI()
                     }) {
                         HStack(spacing: 6) {
-                            Image(systemName: "xmark.circle")
-                            Text("Cancel")
+                            Image(systemName: audioManager.isRecording ? "stop.circle" : "record.circle")
+                            Text(audioManager.isRecording ? "Stop Recording" : "Start Recording")
                         }
                     }
-                    .buttonStyle(.borderless)
+                    .keyboardShortcut(.defaultAction)
+
+                    if audioManager.isRecording {
+                        Button(action: {
+                            coordinator.cancelRecording()
+                        }) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "xmark.circle")
+                                Text("Cancel")
+                            }
+                        }
+                        .buttonStyle(.borderless)
+                    }
                 }
+
+                Button(action: {
+                    coordinator.selectFileForTranscription()
+                }) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "doc.badge.plus")
+                        Text("Transcribe File...")
+                    }
+                }
+                .buttonStyle(.plain)
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .disabled(audioManager.isRecording || transcriptionManager.isTranscribing)
             }
             // Hotkey hints and change links
             VStack(alignment: .leading, spacing: 2) {

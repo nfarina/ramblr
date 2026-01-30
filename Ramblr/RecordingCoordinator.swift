@@ -1,5 +1,6 @@
 import SwiftUI
 import Combine
+import AppKit
 
 class RecordingCoordinator: ObservableObject {
     private var audioManager: AudioManager
@@ -62,6 +63,22 @@ class RecordingCoordinator: ObservableObject {
     // Function to open the log file
     func openLogFile() {
         Logger.shared.openLogFile()
+    }
+
+    // Allow manual selection of an audio file to transcribe
+    func selectFileForTranscription() {
+        logInfo("RecordingCoordinator: Opening file picker for transcription")
+        let panel = NSOpenPanel()
+        panel.title = "Select Audio File"
+        panel.prompt = "Transcribe"
+        panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = false
+        panel.canChooseFiles = true
+        panel.allowedFileTypes = ["wav", "mp3", "m4a", "aac", "flac", "ogg", "opus", "mp4", "mkv", "webm"]
+
+        let response = panel.runModal()
+        guard response == .OK, let selectedURL = panel.url else { return }
+        transcribeSelectedFile(selectedURL)
     }
     
     // Public method for UI to start/stop recording
@@ -164,6 +181,32 @@ class RecordingCoordinator: ObservableObject {
                     self.showTranscriptionErrorWithOptions(recordingURL: recordingURL)
                 }
             }
+        }
+    }
+
+    private func transcribeSelectedFile(_ fileURL: URL) {
+        logInfo("RecordingCoordinator: Selected file for transcription: \(fileURL.path)")
+        lastRecordingURL = fileURL
+
+        if let attributes = try? FileManager.default.attributesOfItem(atPath: fileURL.path),
+           let fileSize = attributes[.size] as? Int64,
+           fileSize > 0 {
+            WaveformIndicatorWindow.shared.showTranscribing()
+            transcribeAudio(recordingURL: fileURL)
+        } else {
+            logError("RecordingCoordinator: Selected file is empty or unreadable")
+            showFileSelectionError()
+        }
+    }
+
+    private func showFileSelectionError() {
+        DispatchQueue.main.async {
+            let alert = NSAlert()
+            alert.messageText = "File Error"
+            alert.informativeText = "Unable to read the selected audio file. Please choose a different file."
+            alert.alertStyle = .warning
+            alert.addButton(withTitle: "OK")
+            alert.runModal()
         }
     }
     
