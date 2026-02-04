@@ -50,6 +50,26 @@ class RecordingCoordinator: ObservableObject {
             logDebug("RecordingCoordinator: Received cancel hotkey notification")
             self?.cancelRecording()
         }
+        
+        // Observe explicit start recording notification (for push-to-talk)
+        NotificationCenter.default.addObserver(
+            forName: NSNotification.Name("StartRecording"),
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            logDebug("RecordingCoordinator: Received StartRecording notification")
+            self?.startRecordingSession()
+        }
+        
+        // Observe explicit stop recording notification (for push-to-talk)
+        NotificationCenter.default.addObserver(
+            forName: NSNotification.Name("StopRecording"),
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            logDebug("RecordingCoordinator: Received StopRecording notification")
+            self?.stopRecordingSession()
+        }
     }
     
     @objc private func updateTranscriptionStatus(_ notification: Notification) {
@@ -121,41 +141,61 @@ class RecordingCoordinator: ObservableObject {
         logInfo("RecordingCoordinator: toggleRecording called, current state: \(audioManager.isRecording)")
         
         if audioManager.isRecording {
-            logInfo("RecordingCoordinator: Stopping recording...")
+            stopRecordingSession()
+        } else {
+            startRecordingSession()
+        }
+    }
+    
+    // Explicit start method
+    private func startRecordingSession() {
+        guard !audioManager.isRecording else {
+            logInfo("RecordingCoordinator: Already recording, ignoring start request")
+            return
+        }
+        
+        logInfo("RecordingCoordinator: Starting recording session...")
+        audioManager.startRecording()
+        
+        // Show waveform indicator
+        WaveformIndicatorWindow.shared.showWaveform()
+    }
+    
+    // Explicit stop method
+    private func stopRecordingSession() {
+        guard audioManager.isRecording else {
+            logInfo("RecordingCoordinator: Not recording, ignoring stop request")
+            return
+        }
+        
+        logInfo("RecordingCoordinator: Stopping recording session...")
+        
+        if let recordingURL = audioManager.stopRecording() {
+            logInfo("RecordingCoordinator: Got recording URL: \(recordingURL)")
+            self.lastRecordingURL = recordingURL // Save for potential retry
+            logInfo("Recording completed: \(recordingURL.lastPathComponent)")
             
-            if let recordingURL = audioManager.stopRecording() {
-                logInfo("RecordingCoordinator: Got recording URL: \(recordingURL)")
-                self.lastRecordingURL = recordingURL // Save for potential retry
-                logInfo("Recording completed: \(recordingURL.lastPathComponent)")
-                
-                // Verify the file exists and has data
-                if let fileSize = try? FileManager.default.attributesOfItem(atPath: recordingURL.path)[.size] as? Int64 {
-                    logInfo("RecordingCoordinator: Recording file size: \(fileSize) bytes")
-                    if fileSize > 0 {
-                        // Switch to transcribing mode
-                        WaveformIndicatorWindow.shared.showTranscribing()
-                        transcribeAudio(recordingURL: recordingURL)
-                    } else {
-                        logError("RecordingCoordinator: Recording file is empty")
-                        WaveformIndicatorWindow.shared.hide()
-                        showRecordingError()
-                    }
+            // Verify the file exists and has data
+            if let fileSize = try? FileManager.default.attributesOfItem(atPath: recordingURL.path)[.size] as? Int64 {
+                logInfo("RecordingCoordinator: Recording file size: \(fileSize) bytes")
+                if fileSize > 0 {
+                    // Switch to transcribing mode
+                    WaveformIndicatorWindow.shared.showTranscribing()
+                    transcribeAudio(recordingURL: recordingURL)
                 } else {
-                    logError("RecordingCoordinator: Could not get recording file size")
+                    logError("RecordingCoordinator: Recording file is empty")
                     WaveformIndicatorWindow.shared.hide()
                     showRecordingError()
                 }
             } else {
-                // Don't show an error - this is likely an intentionally short or silent recording
-                logInfo("RecordingCoordinator: Recording was too short or silent")
+                logError("RecordingCoordinator: Could not get recording file size")
                 WaveformIndicatorWindow.shared.hide()
+                showRecordingError()
             }
         } else {
-            logInfo("RecordingCoordinator: Starting recording...")
-            audioManager.startRecording()
-            
-            // Show waveform indicator
-            WaveformIndicatorWindow.shared.showWaveform()
+            // Don't show an error - this is likely an intentionally short or silent recording
+            logInfo("RecordingCoordinator: Recording was too short or silent")
+            WaveformIndicatorWindow.shared.hide()
         }
     }
     

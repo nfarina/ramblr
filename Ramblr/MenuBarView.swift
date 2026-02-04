@@ -8,7 +8,7 @@ struct MenuBarView: View {
     @ObservedObject var coordinator: RecordingCoordinator
     @State private var apiKey: String = UserDefaults.standard.string(forKey: "OpenAIAPIKey") ?? ""
     @State private var groqApiKey: String = UserDefaults.standard.string(forKey: "GroqAPIKey") ?? ""
-    @State private var autoPasteEnabled: Bool = (UserDefaults.standard.object(forKey: "AutoPasteEnabled") as? Bool) ?? false
+    @State private var autoPasteEnabled: Bool = (UserDefaults.standard.object(forKey: "AutoPasteEnabled") as? Bool) ?? true
     @State private var showHotkeyChangePopover: Bool = false
     @State private var showCancelHotkeyChangePopover: Bool = false
     
@@ -325,6 +325,7 @@ struct MenuBarView: View {
         .onAppear {
             // Refresh accessibility status whenever the menu opens
             transcriptionManager.checkAccessibilityPermission(shouldPrompt: false)
+            hotkeyManager.checkPermissions()
         }
         // Detached panel used instead of sheets for key entry (prevents menu dismissal)
     }
