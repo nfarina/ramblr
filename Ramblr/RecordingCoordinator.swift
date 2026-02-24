@@ -74,7 +74,7 @@ class RecordingCoordinator: ObservableObject {
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
         panel.canChooseFiles = true
-        panel.allowedFileTypes = ["wav", "mp3", "m4a", "aac", "flac", "ogg", "opus", "mp4", "mkv", "webm"]
+        panel.allowedFileTypes = ["wav", "mp3", "m4a", "aac", "flac", "ogg", "opus", "mp4", "mkv", "webm", "qta"]
 
         let response = panel.runModal()
         guard response == .OK, let selectedURL = panel.url else { return }
