@@ -6,6 +6,7 @@ struct MenuBarView: View {
     @ObservedObject var hotkeyManager: HotkeyManager
     @ObservedObject var transcriptionManager: TranscriptionManager
     @ObservedObject var coordinator: RecordingCoordinator
+    @ObservedObject var voiceMemosWatcher: VoiceMemosWatcher
     @State private var apiKey: String = UserDefaults.standard.string(forKey: "OpenAIAPIKey") ?? ""
     @State private var groqApiKey: String = UserDefaults.standard.string(forKey: "GroqAPIKey") ?? ""
     @State private var autoPasteEnabled: Bool = (UserDefaults.standard.object(forKey: "AutoPasteEnabled") as? Bool) ?? false
@@ -13,11 +14,12 @@ struct MenuBarView: View {
     @State private var showCancelHotkeyChangePopover: Bool = false
     
     
-    init(audioManager: AudioManager, hotkeyManager: HotkeyManager, transcriptionManager: TranscriptionManager, coordinator: RecordingCoordinator) {
+    init(audioManager: AudioManager, hotkeyManager: HotkeyManager, transcriptionManager: TranscriptionManager, coordinator: RecordingCoordinator, voiceMemosWatcher: VoiceMemosWatcher) {
         self.audioManager = audioManager
         self.hotkeyManager = hotkeyManager
         self.transcriptionManager = transcriptionManager
         self.coordinator = coordinator
+        self.voiceMemosWatcher = voiceMemosWatcher
     }
     
     var body: some View {
@@ -136,6 +138,29 @@ struct MenuBarView: View {
                     if newValue {
                         transcriptionManager.checkAccessibilityPermission(shouldPrompt: true)
                     }
+                }
+
+                Divider().padding(.top, 6)
+
+                Toggle(isOn: $voiceMemosWatcher.isEnabled) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Auto-transcribe Voice Memos")
+                        Text("Watches for new recordings from Apple Voice Memos")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+
+                if voiceMemosWatcher.isEnabled && voiceMemosWatcher.isProcessing {
+                    HStack(spacing: 4) {
+                        ProgressView()
+                            .scaleEffect(0.5)
+                            .frame(width: 12, height: 12)
+                        Text("Transcribing Voice Memo...")
+                            .font(.caption)
+                            .foregroundColor(.orange)
+                    }
+                    .padding(.top, 2)
                 }
             }
             .padding(.vertical, 5)
