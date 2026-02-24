@@ -1,5 +1,6 @@
 import Foundation
 import AppKit
+import UserNotifications
 
 class VoiceMemosWatcher: ObservableObject {
 
@@ -242,7 +243,8 @@ class VoiceMemosWatcher: ObservableObject {
                 if let text = text {
                     let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
                     logInfo("VoiceMemosWatcher: Transcription complete (\(trimmed.count) chars)")
-                    self.transcriptionManager?.handleTranscriptionOutput(trimmed)
+                    self.transcriptionManager?.addToHistory(trimmed)
+                    self.showTranscriptionNotification(trimmed)
                 } else {
                     logError("VoiceMemosWatcher: Transcription failed for \(fileURL.lastPathComponent)")
                 }
@@ -316,6 +318,26 @@ class VoiceMemosWatcher: ObservableObject {
             UserDefaults.standard.set(false, forKey: self.enabledKey)
             // Set backing storage directly to avoid didSet cycle
             self.isEnabled = false
+        }
+    }
+
+    private func showTranscriptionNotification(_ text: String) {
+        let content = UNMutableNotificationContent()
+        content.title = "Voice Memo Transcribed"
+        let preview = text.prefix(100)
+        content.body = String(preview) + (text.count > 100 ? "…" : "")
+        content.sound = .default
+
+        let request = UNNotificationRequest(
+            identifier: UUID().uuidString,
+            content: content,
+            trigger: nil
+        )
+
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                logError("VoiceMemosWatcher: Failed to deliver notification: \(error.localizedDescription)")
+            }
         }
     }
 

@@ -644,7 +644,7 @@ class TranscriptionManager: ObservableObject {
         UserDefaults.standard.set(history, forKey: historyKey)
     }
 
-    private func addToHistory(_ text: String) {
+    func addToHistory(_ text: String) {
         DispatchQueue.main.async {
             // Remove existing duplicate if present, then insert at top
             if let existingIndex = self.history.firstIndex(of: text) {
