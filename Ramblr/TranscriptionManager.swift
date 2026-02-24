@@ -51,11 +51,7 @@ class TranscriptionManager: ObservableObject {
     private let maxUploadBytes = 19 * 1024 * 1024
     private let chunkSafetyMarginBytes = 64 * 1024
     
-    // Reference to AudioManager for network stress reporting
-    private weak var audioManager: AudioManager?
-    
-    init(audioManager: AudioManager? = nil) {
-        self.audioManager = audioManager
+    init() {
         loadAPIKey()
         loadGroqAPIKey()
         loadHistory()
@@ -68,10 +64,6 @@ class TranscriptionManager: ObservableObject {
             // Update state silently without prompting
             checkAccessibilityPermission(shouldPrompt: false)
         }
-    }
-    
-    func setAudioManager(_ audioManager: AudioManager) {
-        self.audioManager = audioManager
     }
     
     private func loadAPIKey() {
@@ -168,7 +160,6 @@ class TranscriptionManager: ObservableObject {
 
                     if currentRetry < self.maxRetries {
                         currentRetry += 1
-                        self.audioManager?.reportNetworkStress(level: currentRetry)
                         let delay = pow(2.0, Double(currentRetry - 1))
                         self.updateStatus("\(prefix)Retry in \(Int(delay))s... (\(currentRetry)/\(self.maxRetries))")
                         DispatchQueue.main.asyncAfter(deadline: .now() + delay) {

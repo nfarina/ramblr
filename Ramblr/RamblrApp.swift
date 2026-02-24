@@ -42,8 +42,7 @@ struct RamblrApp: App {
         
         // Create managers first
         let audio = AudioManager()
-        // Create transcription manager with audio manager reference
-        let transcription = TranscriptionManager(audioManager: audio)
+        let transcription = TranscriptionManager()
         let hotkey = HotkeyManager()
         
         // Initialize coordinator with the same instances

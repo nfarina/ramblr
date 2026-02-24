@@ -60,16 +60,6 @@ struct MenuBarView: View {
                 }
             }
             
-            if audioManager.networkStressLevel > 0 {
-                HStack {
-                    Image(systemName: "network")
-                    Text("Network quality: reduced")
-                        .font(.caption)
-                        .foregroundColor(.orange)
-                }
-                .padding(.top, 2)
-            }
-            
             Divider().padding(.top, 6)
             
             VStack(alignment: .leading, spacing: 8) {

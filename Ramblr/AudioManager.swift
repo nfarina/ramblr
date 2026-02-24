@@ -17,14 +17,6 @@ class AudioManager: NSObject, ObservableObject {
     private var totalSamples: Int = 0
     private var silentSamples: Int = 0
     
-    // Audio buffer for adaptive compression
-    private var audioBufferMutex = NSLock()
-    private var recordedAudioBuffer: [Int16] = []
-    
-    // Network quality adaptation
-    @Published var networkStressLevel: Int = 0
-    private var adaptiveQualityEnabled: Bool = true
-    
     // This was a good idea but introduces the possibility of dropping a recording you want which is not acceptable,
     // so I've nerfed all the values.
     private let silenceThreshold: Float = 0.01 // Adjust this to change sensitivity
@@ -35,23 +27,6 @@ class AudioManager: NSObject, ObservableObject {
         super.init()
         setupRecordingURL()
         requestMicrophoneAccess()
-    }
-    
-    // MARK: - Network Stress Management
-    
-    /// Report network stress to adjust audio quality for future recordings
-    func reportNetworkStress(level: Int) {
-        logInfo("AudioManager: Network stress level set to \(level)")
-        networkStressLevel = min(5, level) // Cap at level 5
-        
-        // Reset stress level after a delay if not updated
-        DispatchQueue.main.asyncAfter(deadline: .now() + 60.0) { [weak self] in
-            guard let self = self else { return }
-            if self.networkStressLevel == level {
-                self.networkStressLevel = max(0, self.networkStressLevel - 1)
-                logInfo("AudioManager: Auto-reducing network stress level to \(self.networkStressLevel)")
-            }
-        }
     }
     
     // MARK: - Audio Recording Setup
@@ -119,11 +94,6 @@ class AudioManager: NSObject, ObservableObject {
         volumeMeter.volume = 1.0
         audioEngine.connect(inputNode, to: volumeMeter, format: inputFormat)
         audioEngine.prepare()
-        
-        // Reset the audio buffer
-        audioBufferMutex.lock()
-        recordedAudioBuffer.removeAll()
-        audioBufferMutex.unlock()
         
         volumeMeter.installTap(onBus: 0, bufferSize: 1024, format: inputFormat) { [weak self] (buffer, time) in
             self?.audioQueue.async { [weak self] in
@@ -222,12 +192,6 @@ class AudioManager: NSObject, ObservableObject {
             }
         }
         
-        // Add to our buffer in a thread-safe way
-        if !newSamples.isEmpty {
-            audioBufferMutex.lock()
-            recordedAudioBuffer.append(contentsOf: newSamples)
-            audioBufferMutex.unlock()
-        }
     }
     
     private func extractAudioLevels(_ buffer: AVAudioPCMBuffer) {
@@ -390,11 +354,6 @@ class AudioManager: NSObject, ObservableObject {
             return nil
         }
         
-        // Apply adaptive compression based on network stress level
-        if adaptiveQualityEnabled && networkStressLevel > 0 {
-            compressAudioFile(at: recordingURL)
-        }
-        
         // Verify the file exists before returning
         if FileManager.default.fileExists(atPath: recordingURL.path) {
             logInfo("AudioManager: Recording saved successfully at \(recordingURL)")
@@ -404,108 +363,4 @@ class AudioManager: NSObject, ObservableObject {
         return nil
     }
 
-    
-    
-    // MARK: - Audio Compression
-    
-    private func compressAudioFile(at url: URL) {
-        audioBufferMutex.lock()
-        let buffer = recordedAudioBuffer
-        audioBufferMutex.unlock()
-        
-        if buffer.isEmpty {
-            logError("AudioManager: No audio data available for compression")
-            return
-        }
-        
-        logInfo("AudioManager: Compressing audio with network stress level \(networkStressLevel)")
-        
-        do {
-            // First, remove the existing file
-            try? FileManager.default.removeItem(at: url)
-            
-            // Determine target sample rate based on network stress
-            let baseRate: Double = 16000.0 // 16kHz (Whisper's preferred rate)
-            let targetSampleRate: Double = max(8000.0, baseRate - (Double(networkStressLevel) * 2000.0))
-            
-            logInfo("AudioManager: Adaptive quality - Using sample rate \(Int(targetSampleRate))Hz")
-            
-            // Create format with explicit settings for smaller file size
-            let settings: [String: Any] = [
-                AVFormatIDKey: kAudioFormatLinearPCM,
-                AVSampleRateKey: targetSampleRate,
-                AVNumberOfChannelsKey: 1,
-                AVLinearPCMBitDepthKey: 16,
-                AVLinearPCMIsFloatKey: false,
-                AVLinearPCMIsBigEndianKey: false,
-                AVLinearPCMIsNonInterleaved: false
-            ]
-            
-            // Calculate compression ratio
-            let compressionRatio = 16000.0 / targetSampleRate
-            _ = Int(Double(buffer.count) / compressionRatio)
-            
-            // Simple downsampling by taking every Nth sample
-            var downsampledBuffer = [Int16]()
-            let skipFactor = Int(round(compressionRatio))
-            
-            // For level 1, we may just write the buffer as is
-            if skipFactor <= 1 {
-                downsampledBuffer = buffer
-            } else {
-                for i in stride(from: 0, to: buffer.count, by: skipFactor) {
-                    if i < buffer.count {
-                        downsampledBuffer.append(buffer[i])
-                    }
-                }
-            }
-            
-            if downsampledBuffer.isEmpty {
-                logError("AudioManager: Downsampled buffer is empty; skipping compression")
-                return
-            }
-            
-            // Create audio format
-            guard let format = AVAudioFormat(settings: settings) else {
-                logError("AudioManager: Failed to create audio format for compression (sample rate \(targetSampleRate))")
-                return
-            }
-            
-            // Create PCM buffer
-            guard let pcmBuffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(downsampledBuffer.count)) else {
-                logError("AudioManager: Failed to create PCM buffer")
-                return
-            }
-            
-            pcmBuffer.frameLength = AVAudioFrameCount(downsampledBuffer.count)
-            
-            // Get channel data pointers
-            guard let channelData = pcmBuffer.int16ChannelData else {
-                logError("AudioManager: Failed to get channel data")
-                return
-            }
-            
-            // Copy audio data
-            for i in 0..<downsampledBuffer.count {
-                channelData[0][i] = downsampledBuffer[i]
-            }
-            
-            // Create audio file
-            let audioFile = try AVAudioFile(forWriting: url, settings: settings)
-            try audioFile.write(from: pcmBuffer)
-            
-            // Log file size
-            if let attributes = try? FileManager.default.attributesOfItem(atPath: url.path),
-               let size = attributes[.size] as? Int64 {
-                logInfo("AudioManager: Compressed audio file size: \(size) bytes (\(size/1024) KB)")
-            }
-        } catch {
-            logError("AudioManager: Failed to compress audio: \(error)")
-        }
-        
-        // Clear buffer after use
-        audioBufferMutex.lock()
-        recordedAudioBuffer.removeAll()
-        audioBufferMutex.unlock()
-    }
 }

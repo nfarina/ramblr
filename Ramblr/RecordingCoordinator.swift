@@ -15,10 +15,7 @@ class RecordingCoordinator: ObservableObject {
         logInfo("RecordingCoordinator: Initializing")
         self.audioManager = audioManager
         self.transcriptionManager = transcriptionManager
-        
-        // Connect TranscriptionManager to AudioManager for network stress reporting
-        self.transcriptionManager.setAudioManager(audioManager)
-        
+
         // Observe audio levels for waveform indicator
         self.audioManager.$audioLevels.sink { levels in
             WaveformIndicatorWindow.shared.updateAudioLevels(levels)
