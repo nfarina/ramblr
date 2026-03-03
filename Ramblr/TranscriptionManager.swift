@@ -113,6 +113,28 @@ class TranscriptionManager: ObservableObject {
         UserDefaults.standard.set(model, forKey: modelDefaultsKey)
         logInfo("Transcription model set to: \(model)")
     }
+
+    var modelDisplayName: String {
+        switch transcriptionModel {
+        case "openai:whisper-1": return "Whisper (OpenAI)"
+        case "groq:whisper-large-v3": return "Whisper (Groq)"
+        case "openai:gpt-4o-transcribe": return "GPT-4o"
+        case "openai:gpt-4o-mini-transcribe": return "GPT-4o mini"
+        default: return transcriptionModel
+        }
+    }
+
+    var hasRequiredAPIKey: Bool {
+        if transcriptionModel.hasPrefix("groq:") {
+            return !(groqApiKey ?? "").isEmpty
+        } else {
+            return !(apiKey ?? "").isEmpty
+        }
+    }
+
+    var requiredKeyName: String {
+        transcriptionModel.hasPrefix("groq:") ? "Groq" : "OpenAI"
+    }
     
     func checkAccessibilityPermission(shouldPrompt: Bool = false) {
         // Check if we have accessibility permission

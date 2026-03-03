@@ -67,54 +67,21 @@ struct MenuBarView: View {
             Divider().padding(.top, 6)
             
             VStack(alignment: .leading, spacing: 8) {
-                // OpenAI key row
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text("OpenAI API Key:")
-                    Spacer()
-                    Button(apiKey.isEmpty ? "Set" : "Edit") {
-                        KeyEntryPanel.shared.show(title: "OpenAI API Key", initialValue: apiKey) { newValue in
-                            apiKey = newValue
-                            transcriptionManager.setAPIKey(newValue)
-                            logInfo("OpenAI API Key updated")
-                        }
+                // Model & API key summary
+                HStack(spacing: 4) {
+                    if !transcriptionManager.hasRequiredAPIKey {
+                        Text("Set up API key to get started")
+                            .foregroundColor(.red)
+                    } else {
+                        Text("Using \(transcriptionManager.modelDisplayName)")
+                            .foregroundColor(.secondary)
                     }
-                }
-                // Groq key row
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text("Groq API Key:")
-                    Spacer()
-                    Button(groqApiKey.isEmpty ? "Set" : "Edit") {
-                        KeyEntryPanel.shared.show(title: "Groq API Key", initialValue: groqApiKey) { newValue in
-                            groqApiKey = newValue
-                            transcriptionManager.setGroqAPIKey(newValue)
-                            logInfo("Groq API Key updated")
-                        }
+                    Button(action: { openModelSetup() }) {
+                        Text(transcriptionManager.hasRequiredAPIKey ? "Change" : "Set Up").underline()
                     }
+                    .buttonStyle(.plain)
                 }
-                Text("Groq recommended — much faster.")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .padding(.top, -4)
-                
-                Divider().padding(.top, 5).padding(.bottom, 8)
-
-                // Transcription model selector (now dropdown for more options)
-                Picker("Model:", selection: Binding(
-                    get: { transcriptionManager.transcriptionModel },
-                    set: { newValue in
-                        transcriptionManager.setTranscriptionModel(newValue)
-                        // Force view state to refresh binding immediately
-                        // by triggering a trivial state change
-                        self.autoPasteEnabled = self.autoPasteEnabled
-                    }
-                )) {
-                    // Provider-prefixed unique tags
-                    Text("Whisper (OpenAI)").tag("openai:whisper-1")
-                    Text("Whisper (Groq)").tag("groq:whisper-large-v3")
-                    Text("GPT-4o").tag("openai:gpt-4o-transcribe")
-                    Text("GPT-4o mini").tag("openai:gpt-4o-mini-transcribe")
-                }
-                .pickerStyle(.menu)
+                .font(.caption)
 
                 Divider().padding(.top, 6)
 
@@ -418,6 +385,20 @@ struct MenuBarView: View {
             transcriptionManager.checkAccessibilityPermission(shouldPrompt: false)
         }
         // Detached panel used instead of sheets for key entry (prevents menu dismissal)
+    }
+
+    private func openModelSetup() {
+        ModelSetupPanel.shared.show(
+            model: transcriptionManager.transcriptionModel,
+            openAIKey: apiKey,
+            groqKey: groqApiKey
+        ) { newModel, newOpenAIKey, newGroqKey in
+            apiKey = newOpenAIKey
+            groqApiKey = newGroqKey
+            transcriptionManager.setAPIKey(newOpenAIKey)
+            transcriptionManager.setGroqAPIKey(newGroqKey)
+            transcriptionManager.setTranscriptionModel(newModel)
+        }
     }
 
     private func abbreviatePath(_ path: String) -> String {

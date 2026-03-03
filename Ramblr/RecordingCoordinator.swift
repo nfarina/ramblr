@@ -162,8 +162,12 @@ class RecordingCoordinator: ObservableObject {
             self.clipboardOnlyRecording = clipboardOnly
             audioManager.startRecording()
 
-            // Show waveform indicator
-            WaveformIndicatorWindow.shared.showWaveform()
+            // Show waveform indicator with output mode context
+            let autoPasteEnabled = (UserDefaults.standard.object(forKey: "AutoPasteEnabled") as? Bool) ?? false
+            WaveformIndicatorWindow.shared.showWaveform(
+                clipboardOnly: clipboardOnly,
+                showOutputMode: autoPasteEnabled
+            )
         }
     }
     
@@ -180,7 +184,9 @@ class RecordingCoordinator: ObservableObject {
                 logInfo("Transcription successful: \(trimmed.prefix(50))...")
                 // Hide indicator on successful transcription
                 WaveformIndicatorWindow.shared.hide()
-                self.transcriptionManager.handleTranscriptionOutput(trimmed, clipboardOnly: self.clipboardOnlyRecording)
+                // Read the latest clipboardOnly state (user may have toggled via indicator bubble)
+                let clipboardOnly = WaveformIndicatorWindow.shared.clipboardOnly
+                self.transcriptionManager.handleTranscriptionOutput(trimmed, clipboardOnly: clipboardOnly)
             } else {
                 logError("RecordingCoordinator: Transcription failed after retries")
                 // Hide indicator on failed transcription

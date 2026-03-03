@@ -13,6 +13,8 @@ final class WaveformIndicatorWindow: ObservableObject {
     private var waveformModel = WaveformModel()
     @Published var mode: IndicatorMode = .waveform
     @Published var opacity: Double = 0.0
+    @Published var clipboardOnly: Bool = false
+    @Published var showOutputMode: Bool = false
     
     private init() {}
     
@@ -26,17 +28,18 @@ final class WaveformIndicatorWindow: ObservableObject {
             // Click handler to open menu bar menu
             self.openMenuBarMenu()
         }
-        
+
         let hosting = NSHostingController(rootView: waveformView)
         hostingController = hosting
-        
+
         let panel = NSPanel(contentViewController: hosting)
         panel.styleMask = [.borderless, .nonactivatingPanel]
         panel.backgroundColor = NSColor.clear
         panel.isFloatingPanel = true
         panel.hidesOnDeactivate = false
         panel.level = NSWindow.Level.statusBar
-        panel.setContentSize(NSSize(width: 60, height: 20))
+        let windowWidth: CGFloat = showOutputMode ? 200 : 60
+        panel.setContentSize(NSSize(width: windowWidth, height: 20))
         
         // Position at top center of screen, below menu bar
         if let screen = NSScreen.main {
@@ -81,9 +84,11 @@ final class WaveformIndicatorWindow: ObservableObject {
         waveformModel.updateLevels(levels)
     }
     
-    func showWaveform() {
+    func showWaveform(clipboardOnly: Bool = false, showOutputMode: Bool = false) {
         DispatchQueue.main.async { [weak self] in
             self?.mode = .waveform
+            self?.clipboardOnly = clipboardOnly
+            self?.showOutputMode = showOutputMode
             self?.show()
         }
     }
@@ -154,30 +159,49 @@ private struct WaveformIndicatorView: View {
     @ObservedObject var model: WaveformModel
     @ObservedObject var windowModel: WaveformIndicatorWindow
     let onTap: () -> Void
-    
+
     var body: some View {
-        ZStack {
-            // Black pill background
-            RoundedRectangle(cornerRadius: 10)
-                .fill(Color.black.opacity(0.8))
-                .frame(width: 60, height: 20)
-            
-            // Content based on mode
-            Group {
-                switch windowModel.mode {
-                case .waveform:
-                    WaveformView(model: model)
-                        .frame(width: 50, height: 12)
-                case .transcribing:
-                    PulsingDotsView()
-                        .frame(width: 50, height: 12)
+        HStack(spacing: 6) {
+            // Waveform / transcribing pill
+            ZStack {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(Color.black.opacity(0.8))
+                    .frame(width: 60, height: 20)
+
+                Group {
+                    switch windowModel.mode {
+                    case .waveform:
+                        WaveformView(model: model)
+                            .frame(width: 50, height: 12)
+                    case .transcribing:
+                        PulsingDotsView()
+                            .frame(width: 50, height: 12)
+                    }
+                }
+            }
+            .onTapGesture {
+                onTap()
+            }
+
+            // Output mode pill (only during waveform/recording, when auto-paste is relevant)
+            if windowModel.showOutputMode && windowModel.mode == .waveform {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(Color.black.opacity(0.8))
+                        .frame(height: 20)
+
+                    Text(windowModel.clipboardOnly ? "clipboard" : "auto-paste")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundColor(.white.opacity(0.7))
+                        .padding(.horizontal, 8)
+                }
+                .fixedSize()
+                .onTapGesture {
+                    windowModel.clipboardOnly.toggle()
                 }
             }
         }
         .opacity(windowModel.opacity)
-        .onTapGesture {
-            onTap()
-        }
         .background(Color.clear)
     }
 }
