@@ -12,6 +12,10 @@ struct MenuBarView: View {
     @State private var autoPasteEnabled: Bool = (UserDefaults.standard.object(forKey: "AutoPasteEnabled") as? Bool) ?? false
     @State private var showHotkeyChangePopover: Bool = false
     @State private var showCancelHotkeyChangePopover: Bool = false
+    @State private var showClipboardHotkeyChangePopover: Bool = false
+    @State private var saveFolderEnabled: Bool = UserDefaults.standard.bool(forKey: "TranscriptionSaveFolderEnabled")
+    @State private var saveFolderPath: String = UserDefaults.standard.string(forKey: "TranscriptionSaveFolderPath") ?? ""
+    @State private var saveSubdirectoryFormat: String = UserDefaults.standard.string(forKey: "TranscriptionSaveSubdirectoryFormat") ?? "{year}/{month}/{day}"
     
     
     init(audioManager: AudioManager, hotkeyManager: HotkeyManager, transcriptionManager: TranscriptionManager, coordinator: RecordingCoordinator, voiceMemosWatcher: VoiceMemosWatcher) {
@@ -152,6 +156,60 @@ struct MenuBarView: View {
                     }
                     .padding(.top, 2)
                 }
+
+                Divider().padding(.top, 6)
+
+                Toggle(isOn: $saveFolderEnabled) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Save transcriptions to folder")
+                        Text("Each transcription saved as a .txt file")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .onChange(of: saveFolderEnabled) { _, newValue in
+                    transcriptionManager.setSaveFolderEnabled(newValue)
+                }
+
+                if saveFolderEnabled {
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack {
+                            if saveFolderPath.isEmpty {
+                                Text("No folder selected")
+                                    .foregroundColor(.secondary)
+                                    .font(.caption)
+                            } else {
+                                Text(abbreviatePath(saveFolderPath))
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                    .lineLimit(1)
+                                    .truncationMode(.middle)
+                            }
+                            Spacer()
+                            Button("Choose...") {
+                                chooseSaveFolder()
+                            }
+                            .font(.caption)
+                        }
+
+                        HStack(spacing: 4) {
+                            Text("Subfolder format:")
+                                .font(.caption)
+                            TextField("{year}/{month}/{day}", text: $saveSubdirectoryFormat)
+                                .textFieldStyle(.roundedBorder)
+                                .font(.caption)
+                                .frame(maxWidth: 160)
+                                .onChange(of: saveSubdirectoryFormat) { _, newValue in
+                                    transcriptionManager.setSaveSubdirectoryFormat(newValue)
+                                }
+                        }
+
+                        Text("Tokens: {year} {month} {day} {hour} {minute}")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.leading, 20)
+                }
             }
             .padding(.vertical, 5)
             
@@ -239,6 +297,40 @@ struct MenuBarView: View {
                         }
                         .padding(8)
                         .padding(.top, 6)
+                    }
+                }
+                if autoPasteEnabled {
+                    HStack(spacing: 4) {
+                        Text("Press")
+                        Text(hotkeyManager.clipboardDisplayString)
+                            .font(.system(.caption, design: .monospaced))
+                            .foregroundColor(.secondary)
+                        Text("to record to clipboard.")
+                        Button(action: { showClipboardHotkeyChangePopover = true }) {
+                            Text("Change").underline()
+                        }
+                        .buttonStyle(.plain)
+                        .popover(isPresented: $showClipboardHotkeyChangePopover, arrowEdge: .top) {
+                            VStack(spacing: 6) {
+                                Text("Press desired shortcut")
+                                    .font(.headline)
+                                Text("Include modifiers like ⌘ ⌥ ⌃ ⇧")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                    .font(.subheadline)
+                                KeyCaptureRepresentable(
+                                    onCaptured: { keyCode, flags in
+                                        let carbonMods = HotkeyManager.carbonFlags(from: flags)
+                                        hotkeyManager.updateClipboardHotkey(keyCode: UInt32(keyCode), modifiers: carbonMods)
+                                        showClipboardHotkeyChangePopover = false
+                                    },
+                                    onCancel: { showClipboardHotkeyChangePopover = false }
+                                )
+                                .frame(width: 200, height: 0)
+                            }
+                            .padding(8)
+                            .padding(.top, 6)
+                        }
                     }
                 }
                 HStack(spacing: 4) {
@@ -342,6 +434,31 @@ struct MenuBarView: View {
             transcriptionManager.checkAccessibilityPermission(shouldPrompt: false)
         }
         // Detached panel used instead of sheets for key entry (prevents menu dismissal)
+    }
+
+    private func chooseSaveFolder() {
+        let panel = NSOpenPanel()
+        panel.title = "Choose Transcription Save Folder"
+        panel.prompt = "Select"
+        panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.canCreateDirectories = true
+
+        let response = panel.runModal()
+        guard response == .OK, let selectedURL = panel.url else { return }
+
+        saveFolderPath = selectedURL.path
+        transcriptionManager.setSaveFolderPath(selectedURL.path)
+        logInfo("Save folder selected: \(selectedURL.path)")
+    }
+
+    private func abbreviatePath(_ path: String) -> String {
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        if path.hasPrefix(home) {
+            return "~" + path.dropFirst(home.count)
+        }
+        return path
     }
 }
 

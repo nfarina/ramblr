@@ -7,6 +7,7 @@ class RecordingCoordinator: ObservableObject {
     private var transcriptionManager: TranscriptionManager
     private var notificationObserver: NSObjectProtocol?
     private var lastRecordingURL: URL? // Store the last recording URL for retry
+    private var clipboardOnlyRecording = false
     private var cancellables = Set<AnyCancellable>()
     
     @Published var transcriptionStatus: String = ""
@@ -46,6 +47,15 @@ class RecordingCoordinator: ObservableObject {
         ) { [weak self] _ in
             logDebug("RecordingCoordinator: Received cancel hotkey notification")
             self?.cancelRecording()
+        }
+        // Observe clipboard hotkey (record without auto-paste)
+        NotificationCenter.default.addObserver(
+            forName: NSNotification.Name("ClipboardHotkeyPressed"),
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            logDebug("RecordingCoordinator: Received clipboard hotkey notification")
+            self?.toggleRecording(clipboardOnly: true)
         }
     }
     
@@ -114,9 +124,9 @@ class RecordingCoordinator: ObservableObject {
         }
     }
     
-    private func toggleRecording() {
-        logInfo("RecordingCoordinator: toggleRecording called, current state: \(audioManager.isRecording)")
-        
+    private func toggleRecording(clipboardOnly: Bool = false) {
+        logInfo("RecordingCoordinator: toggleRecording called, current state: \(audioManager.isRecording), clipboardOnly: \(clipboardOnly)")
+
         if audioManager.isRecording {
             logInfo("RecordingCoordinator: Stopping recording...")
             
@@ -149,8 +159,9 @@ class RecordingCoordinator: ObservableObject {
             }
         } else {
             logInfo("RecordingCoordinator: Starting recording...")
+            self.clipboardOnlyRecording = clipboardOnly
             audioManager.startRecording()
-            
+
             // Show waveform indicator
             WaveformIndicatorWindow.shared.showWaveform()
         }
@@ -169,7 +180,7 @@ class RecordingCoordinator: ObservableObject {
                 logInfo("Transcription successful: \(trimmed.prefix(50))...")
                 // Hide indicator on successful transcription
                 WaveformIndicatorWindow.shared.hide()
-                self.transcriptionManager.handleTranscriptionOutput(trimmed)
+                self.transcriptionManager.handleTranscriptionOutput(trimmed, clipboardOnly: self.clipboardOnlyRecording)
             } else {
                 logError("RecordingCoordinator: Transcription failed after retries")
                 // Hide indicator on failed transcription

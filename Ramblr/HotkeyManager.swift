@@ -6,17 +6,22 @@ class HotkeyManager: ObservableObject {
     private var eventHandler: EventHandlerRef?
     private var startStopHotKeyRef: EventHotKeyRef?
     private var cancelHotKeyRef: EventHotKeyRef?
-    
+    private var clipboardHotKeyRef: EventHotKeyRef?
+
     // Persisted hotkey configuration
     @Published private(set) var keyCode: UInt32
     @Published private(set) var modifiers: UInt32
     @Published private(set) var cancelKeyCode: UInt32
     @Published private(set) var cancelModifiers: UInt32
-    
+    @Published private(set) var clipboardKeyCode: UInt32
+    @Published private(set) var clipboardModifiers: UInt32
+
     private let keyCodeDefaultsKey = "HotkeyKeyCode"
     private let modifiersDefaultsKey = "HotkeyModifiers"
     private let cancelKeyCodeDefaultsKey = "CancelHotkeyKeyCode"
     private let cancelModifiersDefaultsKey = "CancelHotkeyModifiers"
+    private let clipboardKeyCodeDefaultsKey = "ClipboardHotkeyKeyCode"
+    private let clipboardModifiersDefaultsKey = "ClipboardHotkeyModifiers"
     
     init() {
         logInfo("HotkeyManager: Initializing")
@@ -29,6 +34,10 @@ class HotkeyManager: ObservableObject {
         let storedCancelModifiers = UserDefaults.standard.object(forKey: cancelModifiersDefaultsKey) as? UInt32
         self.cancelKeyCode = UInt32(storedCancelKeyCode ?? Int(kVK_ANSI_C))
         self.cancelModifiers = storedCancelModifiers ?? UInt32(optionKey)
+        let storedClipboardKeyCode = UserDefaults.standard.object(forKey: clipboardKeyCodeDefaultsKey) as? Int
+        let storedClipboardModifiers = UserDefaults.standard.object(forKey: clipboardModifiersDefaultsKey) as? UInt32
+        self.clipboardKeyCode = UInt32(storedClipboardKeyCode ?? Int(kVK_ANSI_D))
+        self.clipboardModifiers = storedClipboardModifiers ?? (UInt32(optionKey) | UInt32(shiftKey))
         setupHotkeys()
         
         // Register for workspace notifications to handle sleep/wake
@@ -83,6 +92,11 @@ class HotkeyManager: ObservableObject {
                         logDebug("HotkeyManager: Cancel hotkey pressed")
                         NotificationCenter.default.post(name: NSNotification.Name("CancelHotkeyPressed"), object: nil)
                     }
+                } else if hotKeyID.id == 3 {
+                    DispatchQueue.main.async {
+                        logDebug("HotkeyManager: Clipboard hotkey pressed")
+                        NotificationCenter.default.post(name: NSNotification.Name("ClipboardHotkeyPressed"), object: nil)
+                    }
                 }
                 return noErr
             },
@@ -122,6 +136,19 @@ class HotkeyManager: ObservableObject {
         )
         if registerCancel != noErr { logError("HotkeyManager: Failed to register cancel hotkey") }
         else { logInfo("HotkeyManager: Registered cancel hotkey: \(cancelDisplayString)") }
+
+        // Register Clipboard hotkey (id 3)
+        gMyHotKeyID.id = UInt32(3)
+        let registerClipboard = RegisterEventHotKey(
+            clipboardKeyCode,
+            clipboardModifiers,
+            gMyHotKeyID,
+            GetApplicationEventTarget(),
+            0,
+            &clipboardHotKeyRef
+        )
+        if registerClipboard != noErr { logError("HotkeyManager: Failed to register clipboard hotkey") }
+        else { logInfo("HotkeyManager: Registered clipboard hotkey: \(clipboardDisplayString)") }
     }
     
     private func cleanupHotkeys() {
@@ -134,7 +161,11 @@ class HotkeyManager: ObservableObject {
             UnregisterEventHotKey(ref)
             self.cancelHotKeyRef = nil
         }
-        
+        if let ref = clipboardHotKeyRef {
+            UnregisterEventHotKey(ref)
+            self.clipboardHotKeyRef = nil
+        }
+
         if let eventHandler = eventHandler {
             RemoveEventHandler(eventHandler)
             self.eventHandler = nil
@@ -172,6 +203,21 @@ class HotkeyManager: ObservableObject {
         setupHotkeys()
     }
     
+    func updateClipboardHotkey(keyCode: UInt32, modifiers: UInt32) {
+        logInfo("HotkeyManager: Updating clipboard hotkey")
+        self.clipboardKeyCode = keyCode
+        self.clipboardModifiers = modifiers
+        UserDefaults.standard.set(Int(keyCode), forKey: clipboardKeyCodeDefaultsKey)
+        UserDefaults.standard.set(modifiers, forKey: clipboardModifiersDefaultsKey)
+        setupHotkeys()
+    }
+
+    var clipboardDisplayString: String {
+        let symbols = Self.symbols(forCarbonModifiers: clipboardModifiers)
+        let key = Self.keyName(fromKeyCode: clipboardKeyCode) ?? "KeyCode \(clipboardKeyCode)"
+        return symbols + key
+    }
+
     var displayString: String {
         let symbols = Self.symbols(forCarbonModifiers: modifiers)
         let key = Self.keyName(fromKeyCode: keyCode) ?? "KeyCode \(keyCode)"

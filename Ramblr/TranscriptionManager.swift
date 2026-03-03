@@ -44,7 +44,15 @@ class TranscriptionManager: ObservableObject {
     private let modelDefaultsKey = "TranscriptionModel"
     // Provider-prefixed model id, e.g. "openai:whisper-1", "groq:whisper-large-v3"
     @Published private(set) var transcriptionModel: String = "openai:whisper-1"
-    
+
+    // Save-to-folder configuration
+    @Published var saveFolderPath: String?
+    @Published var saveFolderEnabled: Bool = false
+    @Published var saveSubdirectoryFormat: String = "{year}/{month}/{day}"
+    private let saveFolderPathKey = "TranscriptionSaveFolderPath"
+    private let saveFolderEnabledKey = "TranscriptionSaveFolderEnabled"
+    private let saveSubdirectoryFormatKey = "TranscriptionSaveSubdirectoryFormat"
+
     // Retry configuration
     private let maxRetries = 3
     private let requestTimeout: TimeInterval = 15.0 // 15 seconds timeout as requested
@@ -56,6 +64,7 @@ class TranscriptionManager: ObservableObject {
         loadGroqAPIKey()
         loadHistory()
         loadTranscriptionModel()
+        loadSaveFolderSettings()
         // Do not prompt on startup unless auto-paste is enabled
         let autoPasteEnabled = (UserDefaults.standard.object(forKey: "AutoPasteEnabled") as? Bool) ?? false
         if autoPasteEnabled {
@@ -529,10 +538,11 @@ class TranscriptionManager: ObservableObject {
     /// Routes the transcription output based on the user's preference.
     /// When AutoPaste is enabled (default), the text is typed into the active app.
     /// Otherwise, the text is copied to the clipboard and a notification is shown.
-    func handleTranscriptionOutput(_ text: String) {
+    func handleTranscriptionOutput(_ text: String, clipboardOnly: Bool = false) {
         let isAutoPasteEnabled = (UserDefaults.standard.object(forKey: "AutoPasteEnabled") as? Bool) ?? false
         addToHistory(text)
-        if isAutoPasteEnabled {
+        saveTranscriptionToFile(text)
+        if isAutoPasteEnabled && !clipboardOnly {
             // If auto-paste is on but we don't have permission, show prompt and fall back to copy
             if !AXIsProcessTrusted() {
                 checkAccessibilityPermission(shouldPrompt: true)
@@ -666,6 +676,87 @@ class TranscriptionManager: ObservableObject {
         }
     }
     
+    // MARK: - Save to Folder
+
+    private func loadSaveFolderSettings() {
+        saveFolderPath = UserDefaults.standard.string(forKey: saveFolderPathKey)
+        saveFolderEnabled = UserDefaults.standard.bool(forKey: saveFolderEnabledKey)
+        saveSubdirectoryFormat = UserDefaults.standard.string(forKey: saveSubdirectoryFormatKey) ?? "{year}/{month}/{day}"
+    }
+
+    func setSaveFolderPath(_ path: String?) {
+        saveFolderPath = path
+        if let path = path {
+            UserDefaults.standard.set(path, forKey: saveFolderPathKey)
+        } else {
+            UserDefaults.standard.removeObject(forKey: saveFolderPathKey)
+        }
+        logInfo("TranscriptionManager: Save folder path set to \(path ?? "nil")")
+    }
+
+    func setSaveFolderEnabled(_ enabled: Bool) {
+        saveFolderEnabled = enabled
+        UserDefaults.standard.set(enabled, forKey: saveFolderEnabledKey)
+        logInfo("TranscriptionManager: Save folder enabled set to \(enabled)")
+    }
+
+    func setSaveSubdirectoryFormat(_ format: String) {
+        saveSubdirectoryFormat = format
+        UserDefaults.standard.set(format, forKey: saveSubdirectoryFormatKey)
+        logInfo("TranscriptionManager: Save subdirectory format set to \(format)")
+    }
+
+    private func saveTranscriptionToFile(_ text: String) {
+        guard saveFolderEnabled,
+              let basePath = saveFolderPath,
+              !basePath.isEmpty else { return }
+
+        let now = Date()
+        let calendar = Calendar.current
+        let components = calendar.dateComponents([.year, .month, .day, .hour, .minute, .second], from: now)
+
+        let year = String(format: "%04d", components.year ?? 0)
+        let month = String(format: "%02d", components.month ?? 0)
+        let day = String(format: "%02d", components.day ?? 0)
+        let hour = String(format: "%02d", components.hour ?? 0)
+        let minute = String(format: "%02d", components.minute ?? 0)
+        let second = String(format: "%02d", components.second ?? 0)
+
+        let subdirectory = saveSubdirectoryFormat
+            .replacingOccurrences(of: "{year}", with: year)
+            .replacingOccurrences(of: "{month}", with: month)
+            .replacingOccurrences(of: "{day}", with: day)
+            .replacingOccurrences(of: "{hour}", with: hour)
+            .replacingOccurrences(of: "{minute}", with: minute)
+
+        let baseURL = URL(fileURLWithPath: basePath, isDirectory: true)
+        let directoryURL = subdirectory.isEmpty ? baseURL : baseURL.appendingPathComponent(subdirectory, isDirectory: true)
+
+        do {
+            try FileManager.default.createDirectory(at: directoryURL, withIntermediateDirectories: true)
+        } catch {
+            logError("TranscriptionManager: Failed to create save directory: \(error)")
+            return
+        }
+
+        let timestamp = "\(year)-\(month)-\(day)_\(hour)-\(minute)-\(second)"
+        let slug = text.prefix(40)
+            .components(separatedBy: .whitespacesAndNewlines)
+            .prefix(5)
+            .joined(separator: "-")
+            .replacingOccurrences(of: "[^a-zA-Z0-9\\-]", with: "", options: .regularExpression)
+
+        let filename = slug.isEmpty ? "\(timestamp).txt" : "\(timestamp)_\(slug).txt"
+        let fileURL = directoryURL.appendingPathComponent(filename)
+
+        do {
+            try text.write(to: fileURL, atomically: true, encoding: .utf8)
+            logInfo("TranscriptionManager: Saved transcription to \(fileURL.path)")
+        } catch {
+            logError("TranscriptionManager: Failed to save transcription file: \(error)")
+        }
+    }
+
     private func showAccessibilityAlert() {
         DispatchQueue.main.async {
             let alert = NSAlert()
