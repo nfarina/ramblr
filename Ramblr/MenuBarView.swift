@@ -162,53 +162,37 @@ struct MenuBarView: View {
                 Toggle(isOn: $saveFolderEnabled) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Save transcriptions to folder")
-                        Text("Each transcription saved as a .txt file")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                        HStack(spacing: 4) {
+                            if saveFolderEnabled && !saveFolderPath.isEmpty {
+                                Text("Saving to \(abbreviatePath(saveFolderPath))")
+                                    .lineLimit(1)
+                                    .truncationMode(.middle)
+                            } else {
+                                Text("Each transcription saved as a .txt file")
+                            }
+                            if saveFolderEnabled {
+                                Button(action: {
+                                    SaveFolderPanel.shared.show(
+                                        folderPath: saveFolderPath,
+                                        subdirectoryFormat: saveSubdirectoryFormat
+                                    ) { newPath, newFormat in
+                                        saveFolderPath = newPath
+                                        saveSubdirectoryFormat = newFormat
+                                        transcriptionManager.setSaveFolderPath(newPath.isEmpty ? nil : newPath)
+                                        transcriptionManager.setSaveSubdirectoryFormat(newFormat)
+                                    }
+                                }) {
+                                    Text("Configure").underline()
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                     }
                 }
                 .onChange(of: saveFolderEnabled) { _, newValue in
                     transcriptionManager.setSaveFolderEnabled(newValue)
-                }
-
-                if saveFolderEnabled {
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack {
-                            if saveFolderPath.isEmpty {
-                                Text("No folder selected")
-                                    .foregroundColor(.secondary)
-                                    .font(.caption)
-                            } else {
-                                Text(abbreviatePath(saveFolderPath))
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                    .lineLimit(1)
-                                    .truncationMode(.middle)
-                            }
-                            Spacer()
-                            Button("Choose...") {
-                                chooseSaveFolder()
-                            }
-                            .font(.caption)
-                        }
-
-                        HStack(spacing: 4) {
-                            Text("Subfolder format:")
-                                .font(.caption)
-                            TextField("{year}/{month}/{day}", text: $saveSubdirectoryFormat)
-                                .textFieldStyle(.roundedBorder)
-                                .font(.caption)
-                                .frame(maxWidth: 160)
-                                .onChange(of: saveSubdirectoryFormat) { _, newValue in
-                                    transcriptionManager.setSaveSubdirectoryFormat(newValue)
-                                }
-                        }
-
-                        Text("Tokens: {year} {month} {day} {hour} {minute}")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                    }
-                    .padding(.leading, 20)
                 }
             }
             .padding(.vertical, 5)
@@ -434,23 +418,6 @@ struct MenuBarView: View {
             transcriptionManager.checkAccessibilityPermission(shouldPrompt: false)
         }
         // Detached panel used instead of sheets for key entry (prevents menu dismissal)
-    }
-
-    private func chooseSaveFolder() {
-        let panel = NSOpenPanel()
-        panel.title = "Choose Transcription Save Folder"
-        panel.prompt = "Select"
-        panel.allowsMultipleSelection = false
-        panel.canChooseDirectories = true
-        panel.canChooseFiles = false
-        panel.canCreateDirectories = true
-
-        let response = panel.runModal()
-        guard response == .OK, let selectedURL = panel.url else { return }
-
-        saveFolderPath = selectedURL.path
-        transcriptionManager.setSaveFolderPath(selectedURL.path)
-        logInfo("Save folder selected: \(selectedURL.path)")
     }
 
     private func abbreviatePath(_ path: String) -> String {

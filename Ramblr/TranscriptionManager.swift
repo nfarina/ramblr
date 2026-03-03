@@ -706,7 +706,7 @@ class TranscriptionManager: ObservableObject {
         logInfo("TranscriptionManager: Save subdirectory format set to \(format)")
     }
 
-    private func saveTranscriptionToFile(_ text: String) {
+    func saveTranscriptionToFile(_ text: String) {
         guard saveFolderEnabled,
               let basePath = saveFolderPath,
               !basePath.isEmpty else { return }
