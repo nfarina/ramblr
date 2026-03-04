@@ -5,10 +5,6 @@ import UserNotifications
 class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         logInfo("Application did finish launching")
-        // Just ensure we're not active
-        if NSApp.isActive {
-            NSApp.deactivate()
-        }
         // Ensure notifications show while app is active/agent
         UNUserNotificationCenter.current().delegate = self
     }
@@ -22,6 +18,19 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
                                 willPresent notification: UNNotification,
                                 withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
         completionHandler([.banner, .list, .sound])
+    }
+    
+    // Handle notification clicks
+    func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                didReceive response: UNNotificationResponse,
+                                withCompletionHandler completionHandler: @escaping () -> Void) {
+        if response.notification.request.content.userInfo["action"] as? String == "open_accessibility" {
+            logInfo("User clicked accessibility notification")
+            if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
+                NSWorkspace.shared.open(url)
+            }
+        }
+        completionHandler()
     }
 }
 
