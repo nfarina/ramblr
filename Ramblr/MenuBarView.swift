@@ -7,6 +7,7 @@ struct MenuBarView: View {
     @ObservedObject var transcriptionManager: TranscriptionManager
     @ObservedObject var coordinator: RecordingCoordinator
     @ObservedObject var voiceMemosWatcher: VoiceMemosWatcher
+    @ObservedObject var mediaPlaybackManager: MediaPlaybackManager
     @State private var apiKey: String = UserDefaults.standard.string(forKey: "OpenAIAPIKey") ?? ""
     @State private var groqApiKey: String = UserDefaults.standard.string(forKey: "GroqAPIKey") ?? ""
     @State private var autoPasteEnabled: Bool = (UserDefaults.standard.object(forKey: "AutoPasteEnabled") as? Bool) ?? false
@@ -18,12 +19,13 @@ struct MenuBarView: View {
     @State private var saveSubdirectoryFormat: String = UserDefaults.standard.string(forKey: "TranscriptionSaveSubdirectoryFormat") ?? "{year}/{month}/{day}"
     
     
-    init(audioManager: AudioManager, hotkeyManager: HotkeyManager, transcriptionManager: TranscriptionManager, coordinator: RecordingCoordinator, voiceMemosWatcher: VoiceMemosWatcher) {
+    init(audioManager: AudioManager, hotkeyManager: HotkeyManager, transcriptionManager: TranscriptionManager, coordinator: RecordingCoordinator, voiceMemosWatcher: VoiceMemosWatcher, mediaPlaybackManager: MediaPlaybackManager) {
         self.audioManager = audioManager
         self.hotkeyManager = hotkeyManager
         self.transcriptionManager = transcriptionManager
         self.coordinator = coordinator
         self.voiceMemosWatcher = voiceMemosWatcher
+        self.mediaPlaybackManager = mediaPlaybackManager
     }
     
     var body: some View {
@@ -35,7 +37,7 @@ struct MenuBarView: View {
             
             HStack {
                 Text("Status:")
-                if autoPasteEnabled && !transcriptionManager.hasAccessibilityPermission {
+                if (autoPasteEnabled || mediaPlaybackManager.isEnabled) && !transcriptionManager.hasAccessibilityPermission {
                     Text("Needs Accessibility Permission")
                         .foregroundColor(.red)
                 } else if audioManager.isRecording {
@@ -96,6 +98,22 @@ struct MenuBarView: View {
                 .onChange(of: autoPasteEnabled) { _, newValue in
                     UserDefaults.standard.set(newValue, forKey: "AutoPasteEnabled")
                     logInfo("AutoPasteEnabled set to \(newValue)")
+                    if newValue {
+                        transcriptionManager.checkAccessibilityPermission(shouldPrompt: true)
+                    }
+                }
+
+                Divider().padding(.top, 6)
+
+                Toggle(isOn: $mediaPlaybackManager.isEnabled) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Pause media while recording")
+                        Text("Auto-pauses playback, resumes when done")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .onChange(of: mediaPlaybackManager.isEnabled) { _, newValue in
                     if newValue {
                         transcriptionManager.checkAccessibilityPermission(shouldPrompt: true)
                     }
@@ -164,7 +182,7 @@ struct MenuBarView: View {
             }
             .padding(.vertical, 5)
             
-            if autoPasteEnabled && !transcriptionManager.hasAccessibilityPermission {
+            if (autoPasteEnabled || mediaPlaybackManager.isEnabled) && !transcriptionManager.hasAccessibilityPermission {
                 Text("⚠️ Accessibility permission required")
                     .font(.caption)
                     .foregroundColor(.red)

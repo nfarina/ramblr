@@ -1,0 +1,77 @@
+#!/usr/bin/perl
+# media-helper: Lightweight helper for media playback state and control.
+# Uses MediaRemoteAdapter.framework via /usr/bin/perl, which is entitled
+# to use the MediaRemote private framework on macOS.
+#
+# Usage: media-helper get-state | pause | play
+
+use strict;
+use warnings;
+use DynaLoader;
+use File::Spec;
+use File::Basename;
+
+my $cmd = $ARGV[0];
+if (!defined $cmd) {
+    print STDERR "Usage: media-helper get-state|pause|play\n";
+    exit 1;
+}
+
+# Find MediaRemoteAdapter.dylib in the same directory as this script
+my $script_dir = dirname(File::Spec->rel2abs(__FILE__));
+my $fw_path = File::Spec->catfile($script_dir, 'MediaRemoteAdapter.dylib');
+
+if (!-e $fw_path) {
+    print STDERR "error: MediaRemoteAdapter.dylib not found at $fw_path\n";
+    exit 1;
+}
+
+# Load framework once
+my $handle = DynaLoader::dl_load_file($fw_path, 0)
+    or die "error: Could not load framework: " . DynaLoader::dl_error() . "\n";
+
+sub load_func {
+    my ($name) = @_;
+    my $sym = DynaLoader::dl_find_symbol($handle, $name)
+        or die "error: $name not found\n";
+    DynaLoader::dl_install_xsub("main::$name", $sym);
+}
+
+sub send_command {
+    my ($command_id) = @_;
+    $ENV{'MEDIAREMOTEADAPTER_PARAM_adapter_send_0_command'} = $command_id;
+    load_func('adapter_send_env');
+    adapter_send_env();
+}
+
+if ($cmd eq 'get-state') {
+    # Capture adapter_get output via child process (it prints to stdout)
+    my $output = `"$^X" -e '
+        use DynaLoader;
+        my \$h = DynaLoader::dl_load_file("$fw_path", 0) or exit 1;
+        my \$s = DynaLoader::dl_find_symbol(\$h, "adapter_get") or exit 1;
+        DynaLoader::dl_install_xsub("main::f", \$s);
+        f();
+    ' 2>/dev/null`;
+
+    if (!$output || $output eq 'null') {
+        print "stopped\n";
+    } elsif ($output =~ /"playing"\s*:\s*true/ ||
+             ($output =~ /"playbackRate"\s*:\s*([0-9.]+)/ && $1 > 0)) {
+        print "playing\n";
+    } else {
+        print "stopped\n";
+    }
+
+} elsif ($cmd eq 'pause') {
+    send_command(1);
+    print "ok\n";
+
+} elsif ($cmd eq 'play') {
+    send_command(0);
+    print "ok\n";
+
+} else {
+    print STDERR "Unknown command: $cmd\n";
+    exit 1;
+}

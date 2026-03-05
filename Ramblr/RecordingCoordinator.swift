@@ -5,17 +5,19 @@ import AppKit
 class RecordingCoordinator: ObservableObject {
     private var audioManager: AudioManager
     private var transcriptionManager: TranscriptionManager
+    private var mediaPlaybackManager: MediaPlaybackManager
     private var notificationObserver: NSObjectProtocol?
     private var lastRecordingURL: URL? // Store the last recording URL for retry
     private var clipboardOnlyRecording = false
     private var cancellables = Set<AnyCancellable>()
-    
+
     @Published var transcriptionStatus: String = ""
-    
-    init(audioManager: AudioManager, transcriptionManager: TranscriptionManager) {
+
+    init(audioManager: AudioManager, transcriptionManager: TranscriptionManager, mediaPlaybackManager: MediaPlaybackManager) {
         logInfo("RecordingCoordinator: Initializing")
         self.audioManager = audioManager
         self.transcriptionManager = transcriptionManager
+        self.mediaPlaybackManager = mediaPlaybackManager
 
         // Observe audio levels for waveform indicator
         self.audioManager.$audioLevels.sink { levels in
@@ -97,7 +99,8 @@ class RecordingCoordinator: ObservableObject {
     func cancelRecording() {
         guard audioManager.isRecording else { return }
         logInfo("RecordingCoordinator: Cancelling recording at user request")
-        
+        mediaPlaybackManager.resumeIfWePaused()
+
         // Hide waveform indicator
         WaveformIndicatorWindow.shared.hide()
         
@@ -129,7 +132,8 @@ class RecordingCoordinator: ObservableObject {
 
         if audioManager.isRecording {
             logInfo("RecordingCoordinator: Stopping recording...")
-            
+            mediaPlaybackManager.resumeIfWePaused()
+
             if let recordingURL = audioManager.stopRecording() {
                 logInfo("RecordingCoordinator: Got recording URL: \(recordingURL)")
                 self.lastRecordingURL = recordingURL // Save for potential retry
@@ -160,14 +164,19 @@ class RecordingCoordinator: ObservableObject {
         } else {
             logInfo("RecordingCoordinator: Starting recording...")
             self.clipboardOnlyRecording = clipboardOnly
-            audioManager.startRecording()
 
-            // Show waveform indicator with output mode context
-            let autoPasteEnabled = (UserDefaults.standard.object(forKey: "AutoPasteEnabled") as? Bool) ?? false
-            WaveformIndicatorWindow.shared.showWaveform(
-                clipboardOnly: clipboardOnly,
-                showOutputMode: autoPasteEnabled
-            )
+            // Pause media if enabled, then start recording
+            mediaPlaybackManager.pauseIfPlaying { [weak self] in
+                guard let self = self else { return }
+                self.audioManager.startRecording()
+
+                // Show waveform indicator with output mode context
+                let autoPasteEnabled = (UserDefaults.standard.object(forKey: "AutoPasteEnabled") as? Bool) ?? false
+                WaveformIndicatorWindow.shared.showWaveform(
+                    clipboardOnly: clipboardOnly,
+                    showOutputMode: autoPasteEnabled
+                )
+            }
         }
     }
     

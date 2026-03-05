@@ -68,6 +68,7 @@
 				01607EF72D1883C80006DBE4 /* Sources */,
 				01607EF82D1883C80006DBE4 /* Frameworks */,
 				01607EF92D1883C80006DBE4 /* Resources */,
+				AA0000012D1883C80006DBE4 /* Build media-helper */,
 			);
 			buildRules = (
 			);
@@ -126,6 +127,27 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		AA0000012D1883C80006DBE4 /* Build media-helper */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/MediaHelper/media-helper",
+			);
+			name = "Build media-helper";
+			outputPaths = (
+				"$(BUILT_PRODUCTS_DIR)/$(PRODUCT_NAME).app/Contents/Resources/media-helper",
+				"$(BUILT_PRODUCTS_DIR)/$(PRODUCT_NAME).app/Contents/Resources/MediaRemoteAdapter.dylib",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "APP_DIR=\"${BUILT_PRODUCTS_DIR}/${PRODUCT_NAME}.app\"\nRES_DIR=\"${APP_DIR}/Contents/Resources\"\n\n# Copy MediaRemoteAdapter dylib into Resources\nADAPTER_DYLIB=\"\"\nfor candidate in \\\n  /opt/homebrew/Cellar/media-control/*/Frameworks/MediaRemoteAdapter.framework/Versions/A/MediaRemoteAdapter \\\n  /opt/homebrew/Frameworks/MediaRemoteAdapter.framework/Versions/A/MediaRemoteAdapter \\\n  /usr/local/Frameworks/MediaRemoteAdapter.framework/Versions/A/MediaRemoteAdapter; do\n  if [ -f \"$candidate\" ]; then\n    ADAPTER_DYLIB=\"$candidate\"\n    break\n  fi\ndone\nif [ -n \"$ADAPTER_DYLIB\" ]; then\n  cp -L \"$ADAPTER_DYLIB\" \"$RES_DIR/MediaRemoteAdapter.dylib\"\nelse\n  echo \"warning: MediaRemoteAdapter not found. Install: brew install jonasvandenbe/tap/media-control\"\nfi\n\n# Copy media-helper Perl script\ncp \"${SRCROOT}/MediaHelper/media-helper\" \"$RES_DIR/media-helper\"\nchmod +x \"$RES_DIR/media-helper\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		01607EF72D1883C80006DBE4 /* Sources */ = {
