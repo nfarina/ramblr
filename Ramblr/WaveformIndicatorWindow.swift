@@ -183,8 +183,8 @@ private struct WaveformIndicatorView: View {
                 onTap()
             }
 
-            // Output mode pill (only during waveform/recording, when auto-paste is relevant)
-            if windowModel.showOutputMode && windowModel.mode == .waveform {
+            // Output mode pill (when auto-paste is relevant)
+            if windowModel.showOutputMode {
                 ZStack {
                     RoundedRectangle(cornerRadius: 10)
                         .fill(Color.black.opacity(0.8))
@@ -201,6 +201,7 @@ private struct WaveformIndicatorView: View {
                 }
             }
         }
+        .frame(maxWidth: .infinity)
         .opacity(windowModel.opacity)
         .background(Color.clear)
     }
