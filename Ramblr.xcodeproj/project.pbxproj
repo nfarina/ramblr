@@ -140,12 +140,12 @@
 			);
 			name = "Build media-helper";
 			outputPaths = (
-				"$(BUILT_PRODUCTS_DIR)/$(PRODUCT_NAME).app/Contents/Resources/media-helper",
-				"$(BUILT_PRODUCTS_DIR)/$(PRODUCT_NAME).app/Contents/Resources/MediaRemoteAdapter.dylib",
+				"$(TARGET_BUILD_DIR)/$(PRODUCT_NAME).app/Contents/Resources/media-helper",
+				"$(TARGET_BUILD_DIR)/$(PRODUCT_NAME).app/Contents/Resources/MediaRemoteAdapter.dylib",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "APP_DIR=\"${BUILT_PRODUCTS_DIR}/${PRODUCT_NAME}.app\"\nRES_DIR=\"${APP_DIR}/Contents/Resources\"\n\n# Copy MediaRemoteAdapter dylib into Resources\nADAPTER_DYLIB=\"\"\nfor candidate in \\\n  /opt/homebrew/Cellar/media-control/*/Frameworks/MediaRemoteAdapter.framework/Versions/A/MediaRemoteAdapter \\\n  /opt/homebrew/Frameworks/MediaRemoteAdapter.framework/Versions/A/MediaRemoteAdapter \\\n  /usr/local/Frameworks/MediaRemoteAdapter.framework/Versions/A/MediaRemoteAdapter; do\n  if [ -f \"$candidate\" ]; then\n    ADAPTER_DYLIB=\"$candidate\"\n    break\n  fi\ndone\nif [ -n \"$ADAPTER_DYLIB\" ]; then\n  cp -L \"$ADAPTER_DYLIB\" \"$RES_DIR/MediaRemoteAdapter.dylib\"\nelse\n  echo \"warning: MediaRemoteAdapter not found. Install: brew install jonasvandenbe/tap/media-control\"\nfi\n\n# Copy media-helper Perl script\ncp \"${SRCROOT}/MediaHelper/media-helper\" \"$RES_DIR/media-helper\"\nchmod +x \"$RES_DIR/media-helper\"\n";
+			shellScript = "APP_DIR=\"${TARGET_BUILD_DIR}/${PRODUCT_NAME}.app\"\nRES_DIR=\"${APP_DIR}/Contents/Resources\"\n\n# Copy MediaRemoteAdapter dylib into Resources\nADAPTER_DYLIB=\"\"\nfor candidate in \\\n  /opt/homebrew/Cellar/media-control/*/Frameworks/MediaRemoteAdapter.framework/Versions/A/MediaRemoteAdapter \\\n  /opt/homebrew/Frameworks/MediaRemoteAdapter.framework/Versions/A/MediaRemoteAdapter \\\n  /usr/local/Frameworks/MediaRemoteAdapter.framework/Versions/A/MediaRemoteAdapter; do\n  if [ -f \"$candidate\" ]; then\n    ADAPTER_DYLIB=\"$candidate\"\n    break\n  fi\ndone\nif [ -n \"$ADAPTER_DYLIB\" ]; then\n  cp -L \"$ADAPTER_DYLIB\" \"$RES_DIR/MediaRemoteAdapter.dylib\"\nelse\n  echo \"warning: MediaRemoteAdapter not found. Install: brew install jonasvandenbe/tap/media-control\"\nfi\n\n# Copy media-helper Perl script\ncp \"${SRCROOT}/MediaHelper/media-helper\" \"$RES_DIR/media-helper\"\nchmod +x \"$RES_DIR/media-helper\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -293,7 +293,7 @@
 				CODE_SIGN_ENTITLEMENTS = Ramblr/Ramblr.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 10;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"Ramblr/Preview Content\"";
 				ENABLE_APP_SANDBOX = NO;
@@ -310,7 +310,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.6.1;
+				MARKETING_VERSION = 1.7.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.nfarina.Ramblr;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -327,7 +327,7 @@
 				CODE_SIGN_ENTITLEMENTS = Ramblr/Ramblr.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 10;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"Ramblr/Preview Content\"";
 				ENABLE_APP_SANDBOX = NO;
@@ -344,7 +344,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.6.1;
+				MARKETING_VERSION = 1.7.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.nfarina.Ramblr;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
