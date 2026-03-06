@@ -149,9 +149,15 @@ struct MenuBarView: View {
                         Text("Save transcriptions to folder")
                         HStack(spacing: 4) {
                             if saveFolderEnabled && !saveFolderPath.isEmpty {
-                                Text("Saving to \(abbreviatePath(saveFolderPath))")
-                                    .lineLimit(1)
-                                    .truncationMode(.middle)
+                                Button(action: {
+                                    NSWorkspace.shared.open(URL(fileURLWithPath: saveFolderPath))
+                                }) {
+                                    Text("Saving to \(abbreviatePath(saveFolderPath))")
+                                        .underline()
+                                        .lineLimit(1)
+                                        .truncationMode(.middle)
+                                }
+                                .buttonStyle(.plain)
                             } else {
                                 Text("Each transcription saved as a .txt file")
                             }
