@@ -13,9 +13,9 @@ AI doesn't need your thoughts and instructions all nicely written out like this 
 
 Wow, that's a lot of text to read - but AI is *great* at reading lots of text like this, and this text is _full_ of useful information. Rambles better represent your true state of mind: you might repeat yourself if you're sure about something, or waffle when you're not. That's all signal.
 
-The best way to ramble is to hit Start Listening before you even begin reviewing an AI's response. Then just blab your thoughts while you're looking over its work, and when you're done reviewing, hit Stop. Ramblr will transcribe your blatherings using the Whisper API with astonishing accuracy, then put the result in your clipboard and beep a notification when it's ready to be pasted somewhere.
+The best way to ramble is to start recording, then just click around your codebase, rattling off file names like "look in admin site dot tsx" or component/function names, or anything that you'd tell a human. Or start recording _before_ you even begin reviewing an AI's response, then just blab your thoughts while you're looking over its work. When you're done reviewing, Ramblr will transcribe your blatherings using the Whisper API with astonishing accuracy.
 
-Ramblr is a native macOS app that lives in your menubar. All you need to do is download the app and paste your ~[OpenAI API key](https://platform.openai.com/api-keys)~ [Groq API Key](https://console.groq.com/keys) (You can use OpenAI's API, but Groq is much, _much_ faster for the same quality service).
+Ramblr is a native macOS app that lives in your menubar. All you need to do is download the app and paste your ~[OpenAI API key](https://platform.openai.com/api-keys)~ [Groq API Key](https://console.groq.com/keys) (You can use OpenAI's API, but Groq is much, _much_ faster for the same quality service). That's Groq-with-a-Q, _not_ xAI's Grok.
 
 <img width="340" height="474" alt="Ramblr ramble" src="https://github.com/user-attachments/assets/80b456f5-36de-438d-b8e5-d4e4a196aea9" />
 
@@ -25,15 +25,18 @@ Ramblr is a native macOS app that lives in your menubar. All you need to do is d
 - Near-perfect transcription via Whisper API
 - Copies to clipboard and notifies with sound when ready to paste, or auto-paste into active app
 - History of the last 10 transcriptions for quick re-copy
+- Can auto-save transcriptions to a folder
+- Can auto-pause music while recording
+- Can auto-import Voice Memos from Mac (or iOS via iCloud sync)
 
 ## Wait, doesn't this already exist?
 
 [Yes](https://superwhisper.com), [yes](https://goodsnooze.gumroad.com/l/macwhisper), [yes](https://wisprflow.ai). But I have problems with them all:
 
 - They all want to lock you into a subscription model. For dictation!
-- They either use a local transcription model (not as accurate, or slower) or the Whisper API (that's the real magic here)
+- They either use a local transcription model (not as accurate, or slower) or the exact same Whisper API Ramblr uses (that's the real magic here)
 
-I just wanted something I could use at cost. So I vibe-coded Ramblr. It's free to download and use! You just pay Groq/OpenAI directly for the Whisper API, which is pennies.
+I just wanted something I could use at cost. So I vibe-coded Ramblr. It's free to download and use! You just pay Groq/OpenAI directly for the Whisper API, which is pennies (my last monthly bill from Groq was $0.04).
 
 ## Requirements
 
@@ -49,7 +52,6 @@ You can [download the latest release here](https://github.com/nfarina/ramblr/rel
 - Audio is recorded to a temporary file during recording and removed after
 - Transcription history (last 10 items) and the API key are stored in UserDefaults
 - Logs are written to `~/Library/Application Support/Ramblr/Ramblr.log`
-- Transcription is performed by OpenAI’s Whisper API
 
 ## License
 
