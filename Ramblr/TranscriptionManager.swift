@@ -534,23 +534,56 @@ class TranscriptionManager: ObservableObject {
             return
         }
         
-        let script = """
-        tell application "System Events"
-            keystroke "\(text)"
-        end tell
-        """
-        
-        var error: NSDictionary?
-        if let scriptObject = NSAppleScript(source: script) {
-            scriptObject.executeAndReturnError(&error)
-            if let error = error {
-                logError("AppleScript error: \(error)")
-                // If we get an error, recheck permissions as they might have been revoked
-                DispatchQueue.main.async {
-                    self.checkAccessibilityPermission()
+        let pasteboard = NSPasteboard.general
+
+        // Save current clipboard contents (all types) so we can restore them after pasting
+        var previousItems: [[(NSPasteboard.PasteboardType, Data)]] = []
+        if let items = pasteboard.pasteboardItems {
+            for item in items {
+                var typeData: [(NSPasteboard.PasteboardType, Data)] = []
+                for type in item.types {
+                    if let data = item.data(forType: type) {
+                        typeData.append((type, data))
+                    }
                 }
-            } else {
-                logInfo("Successfully typed text")
+                previousItems.append(typeData)
+            }
+        }
+
+        // Put transcription text on the clipboard
+        pasteboard.clearContents()
+        pasteboard.setString(text, forType: .string)
+
+        // Simulate Cmd+V using CGEvent
+        let source = CGEventSource(stateID: .hidSystemState)
+
+        guard let keyDown = CGEvent(keyboardEventSource: source, virtualKey: 0x09, keyDown: true),   // 0x09 = kVK_ANSI_V
+              let keyUp   = CGEvent(keyboardEventSource: source, virtualKey: 0x09, keyDown: false) else {
+            logError("Failed to create CGEvent for Cmd+V")
+            return
+        }
+
+        keyDown.flags = .maskCommand
+        keyUp.flags   = .maskCommand
+
+        keyDown.post(tap: .cghidEventTap)
+        keyUp.post(tap: .cghidEventTap)
+
+        logInfo("Successfully pasted text via Cmd+V")
+
+        // Restore previous clipboard after a short delay
+        let ourChangeCount = pasteboard.changeCount
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            if pasteboard.changeCount == ourChangeCount {
+                pasteboard.clearContents()
+                for typeData in previousItems {
+                    let item = NSPasteboardItem()
+                    for (type, data) in typeData {
+                        item.setData(data, forType: type)
+                    }
+                    pasteboard.writeObjects([item])
+                }
+                logInfo("Restored previous clipboard contents")
             }
         }
     }
