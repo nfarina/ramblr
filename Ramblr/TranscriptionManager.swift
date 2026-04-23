@@ -283,20 +283,29 @@ class TranscriptionManager: ObservableObject {
 
     private func splitAudioFile(audioURL: URL) throws -> [URL] {
         let audioFile = try AVAudioFile(forReading: audioURL)
-        let format = audioFile.processingFormat
-        let streamDescription = format.streamDescription.pointee
+        let readFormat = audioFile.processingFormat
 
-        var bytesPerFrame = Int(streamDescription.mBytesPerFrame)
-        if bytesPerFrame == 0 {
-            let bytesPerSample = Int(streamDescription.mBitsPerChannel) / 8
-            bytesPerFrame = bytesPerSample * Int(streamDescription.mChannelsPerFrame)
+        // Output as 16-bit interleaved PCM WAV. This gives a predictable on-disk
+        // size (bytesPerFrame = 2 * channels) and is plenty for speech transcription.
+        // The processingFormat is typically non-interleaved Float32, where
+        // mBytesPerFrame describes one channel only — relying on it leads to
+        // chunks sized 2×+ too large for multi-channel sources.
+        guard let outputFormat = AVAudioFormat(
+            commonFormat: .pcmFormatInt16,
+            sampleRate: readFormat.sampleRate,
+            channels: readFormat.channelCount,
+            interleaved: true
+        ) else {
+            throw TranscriptionError.fileError("Failed to create output format")
         }
-        if bytesPerFrame <= 0 {
+
+        let outputBytesPerFrame = Int(outputFormat.streamDescription.pointee.mBytesPerFrame)
+        if outputBytesPerFrame <= 0 {
             throw TranscriptionError.fileError("Unsupported audio format for chunking")
         }
 
         let maxChunkBytes = maxUploadBytes - chunkSafetyMarginBytes
-        let maxFramesPerChunk = max(1, maxChunkBytes / bytesPerFrame)
+        let maxFramesPerChunk = max(1, maxChunkBytes / outputBytesPerFrame)
         var chunkURLs: [URL] = []
         var chunkIndex = 0
 
@@ -305,7 +314,7 @@ class TranscriptionManager: ObservableObject {
             let framesToRead = min(AVAudioFrameCount(maxFramesPerChunk), AVAudioFrameCount(framesRemaining))
             if framesToRead == 0 { break }
 
-            guard let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: framesToRead) else {
+            guard let buffer = AVAudioPCMBuffer(pcmFormat: readFormat, frameCapacity: framesToRead) else {
                 throw TranscriptionError.fileError("Failed to allocate audio buffer")
             }
 
@@ -313,7 +322,7 @@ class TranscriptionManager: ObservableObject {
             if buffer.frameLength == 0 { break }
 
             let chunkURL = makeChunkURL(index: chunkIndex)
-            let chunkFile = try AVAudioFile(forWriting: chunkURL, settings: format.settings)
+            let chunkFile = try AVAudioFile(forWriting: chunkURL, settings: outputFormat.settings)
             try chunkFile.write(from: buffer)
 
             if let chunkSize = fileSize(at: chunkURL), chunkSize > Int64(maxUploadBytes) {

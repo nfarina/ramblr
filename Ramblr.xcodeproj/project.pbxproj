@@ -293,7 +293,7 @@
 				CODE_SIGN_ENTITLEMENTS = Ramblr/Ramblr.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 12;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"Ramblr/Preview Content\"";
 				ENABLE_APP_SANDBOX = NO;
@@ -310,7 +310,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.7.1;
+				MARKETING_VERSION = 1.7.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.nfarina.Ramblr;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -327,7 +327,7 @@
 				CODE_SIGN_ENTITLEMENTS = Ramblr/Ramblr.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 12;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"Ramblr/Preview Content\"";
 				ENABLE_APP_SANDBOX = NO;
@@ -344,7 +344,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.7.1;
+				MARKETING_VERSION = 1.7.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.nfarina.Ramblr;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
