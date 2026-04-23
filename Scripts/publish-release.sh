@@ -75,7 +75,9 @@ Leave the file empty — or close without saving — to cancel the release.
 EOF
 
   BEFORE_MTIME="$(stat -f "%m" "${NOTES_FILE}")"
-  "${EDITOR_CMD}" "${NOTES_FILE}"
+  # $EDITOR may include flags (e.g. "cursor --wait"). Re-parse via sh so the
+  # command and args split correctly — same trick git uses.
+  sh -c "${EDITOR_CMD} \"\$@\"" "${EDITOR_CMD}" "${NOTES_FILE}"
   AFTER_MTIME="$(stat -f "%m" "${NOTES_FILE}")"
 
   if [ "${BEFORE_MTIME}" = "${AFTER_MTIME}" ]; then
