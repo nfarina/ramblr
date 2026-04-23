@@ -40,6 +40,57 @@ ZIP_PATH="dist/Ramblr-${VERSION}-macos.zip"
 
 command -v gh >/dev/null 2>&1 || { echo "The 'gh' CLI is required. brew install gh" >&2; exit 1; }
 
+# If no notes file was provided, pop up the user's editor with a template.
+# Mirrors `git commit` — empty/unsaved → abort the release. HTML comments are
+# used for instructions so markdown headings in the notes aren't misread as
+# comments.
+if [ -z "${NOTES_FILE}" ]; then
+  EDITOR_CMD="${VISUAL:-${EDITOR:-}}"
+  if [ -z "${EDITOR_CMD}" ]; then
+    for candidate in nano vi; do
+      if command -v "${candidate}" >/dev/null 2>&1; then
+        EDITOR_CMD="${candidate}"
+        break
+      fi
+    done
+  fi
+  if [ -z "${EDITOR_CMD}" ]; then
+    echo "No editor found. Set \$VISUAL or \$EDITOR, or pass --notes <path>." >&2
+    exit 1
+  fi
+
+  NOTES_DIR="$(mktemp -d)"
+  NOTES_FILE="${NOTES_DIR}/release-notes-${TAG}.md"
+  cat > "${NOTES_FILE}" <<'EOF'
+## What's new
+
+-
+
+<!--
+Write your release notes in Markdown above this block.
+Everything inside HTML comments (including this one) will be stripped out.
+
+Leave the file empty — or close without saving — to cancel the release.
+-->
+EOF
+
+  BEFORE_MTIME="$(stat -f "%m" "${NOTES_FILE}")"
+  "${EDITOR_CMD}" "${NOTES_FILE}"
+  AFTER_MTIME="$(stat -f "%m" "${NOTES_FILE}")"
+
+  if [ "${BEFORE_MTIME}" = "${AFTER_MTIME}" ]; then
+    echo "Release notes untouched — cancelling release." >&2
+    exit 1
+  fi
+
+  STRIPPED="$(perl -0777 -pe 's/<!--.*?-->//gs' "${NOTES_FILE}")"
+  if [ -z "$(printf '%s' "${STRIPPED}" | tr -d '[:space:]')" ]; then
+    echo "Release notes are empty — cancelling release." >&2
+    exit 1
+  fi
+  printf '%s' "${STRIPPED}" > "${NOTES_FILE}"
+fi
+
 if [ ! -f "${ZIP_PATH}" ]; then
   echo "Building release…"
   ./Scripts/local-release-build.sh "${VERSION}"
