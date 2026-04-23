@@ -1,9 +1,23 @@
-<?xml version="1.0" encoding="utf-8"?>
-<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
     <channel>
         <title>Ramblr</title>
         <link>https://nfarina.github.io/ramblr/appcast.xml</link>
         <description>Updates for Ramblr</description>
         <language>en</language>
+        <item>
+            <title>1.7.3</title>
+            <pubDate>Thu, 23 Apr 2026 10:34:13 -0700</pubDate>
+            <link>https://nfarina.github.io/ramblr</link>
+            <sparkle:fullReleaseNotesLink>https://github.com/nfarina/ramblr/releases/tag/v1.7.3</sparkle:fullReleaseNotesLink>
+            <sparkle:version>13</sparkle:version>
+            <sparkle:shortVersionString>1.7.3</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>15.2</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <description sparkle:format="markdown"><![CDATA[## What's new
+
+- Auto-updating to new versions via Sparkle]]></description>
+            <enclosure url="https://github.com/nfarina/ramblr/releases/download/v1.7.3/Ramblr-1.7.3-macos.zip" length="2870933" type="application/octet-stream" sparkle:edSignature="o6ZIJMbGKheoEoNKIDQ6oTtV1mNrmuP3oRBCKPP2jyLQpqER6wpFiN66m7rLPIGZONYP9XUo8fr6dx6VODfSCA=="/>
+        </item>
     </channel>
 </rss>
