@@ -8,5 +8,11 @@
     <string>Ramblr needs to simulate keyboard events to paste transcribed text.</string>
     <key>NSAccessibilityUsageDescription</key>
     <string>Ramblr needs accessibility access to simulate keyboard events for pasting.</string>
+    <key>SUFeedURL</key>
+    <string>https://nfarina.github.io/ramblr/appcast.xml</string>
+    <key>SUPublicEDKey</key>
+    <string>g+33peR3+lMEHkIbZK3rnbyq0HC6TyD7rLjlsX+tyP0=</string>
+    <key>SUEnableAutomaticChecks</key>
+    <true/>
 </dict>
 </plist>

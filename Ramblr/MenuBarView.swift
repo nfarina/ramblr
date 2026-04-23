@@ -1,5 +1,6 @@
 import SwiftUI
 import Carbon
+import Sparkle
 
 struct MenuBarView: View {
     @ObservedObject var audioManager: AudioManager
@@ -8,6 +9,7 @@ struct MenuBarView: View {
     @ObservedObject var coordinator: RecordingCoordinator
     @ObservedObject var voiceMemosWatcher: VoiceMemosWatcher
     @ObservedObject var mediaPlaybackManager: MediaPlaybackManager
+    let updater: SPUUpdater
     @State private var apiKey: String = UserDefaults.standard.string(forKey: "OpenAIAPIKey") ?? ""
     @State private var groqApiKey: String = UserDefaults.standard.string(forKey: "GroqAPIKey") ?? ""
     @State private var autoPasteEnabled: Bool = (UserDefaults.standard.object(forKey: "AutoPasteEnabled") as? Bool) ?? false
@@ -17,15 +19,16 @@ struct MenuBarView: View {
     @State private var saveFolderEnabled: Bool = UserDefaults.standard.bool(forKey: "TranscriptionSaveFolderEnabled")
     @State private var saveFolderPath: String = UserDefaults.standard.string(forKey: "TranscriptionSaveFolderPath") ?? ""
     @State private var saveSubdirectoryFormat: String = UserDefaults.standard.string(forKey: "TranscriptionSaveSubdirectoryFormat") ?? "{year}/{month}/{day}"
-    
-    
-    init(audioManager: AudioManager, hotkeyManager: HotkeyManager, transcriptionManager: TranscriptionManager, coordinator: RecordingCoordinator, voiceMemosWatcher: VoiceMemosWatcher, mediaPlaybackManager: MediaPlaybackManager) {
+
+
+    init(audioManager: AudioManager, hotkeyManager: HotkeyManager, transcriptionManager: TranscriptionManager, coordinator: RecordingCoordinator, voiceMemosWatcher: VoiceMemosWatcher, mediaPlaybackManager: MediaPlaybackManager, updater: SPUUpdater) {
         self.audioManager = audioManager
         self.hotkeyManager = hotkeyManager
         self.transcriptionManager = transcriptionManager
         self.coordinator = coordinator
         self.voiceMemosWatcher = voiceMemosWatcher
         self.mediaPlaybackManager = mediaPlaybackManager
+        self.updater = updater
     }
     
     var body: some View {
@@ -378,9 +381,9 @@ struct MenuBarView: View {
                         Text("View Logs")
                     }
                 }
-                
+
                 Spacer()
-                
+
                 if !transcriptionManager.history.isEmpty {
                     Button(action: {
                         transcriptionManager.clearHistory()
@@ -400,6 +403,11 @@ struct MenuBarView: View {
                 }) {
                     Text("Quit")
                 }
+            }
+
+            HStack {
+                CheckForUpdatesView(updater: updater)
+                Spacer()
             }
         }
         .padding()

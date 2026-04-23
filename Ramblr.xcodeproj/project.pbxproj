@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		01F5631D2F9A636400DCC190 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 01F5631C2F9A636400DCC190 /* Sparkle */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		01607EFB2D1883C80006DBE4 /* Ramblr.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Ramblr.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -36,6 +40,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				01F5631D2F9A636400DCC190 /* Sparkle in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -79,6 +84,7 @@
 			);
 			name = Ramblr;
 			packageProductDependencies = (
+				01F5631C2F9A636400DCC190 /* Sparkle */,
 			);
 			productName = Ramblr;
 			productReference = 01607EFB2D1883C80006DBE4 /* Ramblr.app */;
@@ -108,6 +114,9 @@
 			);
 			mainGroup = 01607EF22D1883C80006DBE4;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				01F5631B2F9A636400DCC190 /* XCRemoteSwiftPackageReference "Sparkle" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 01607EFC2D1883C80006DBE4 /* Products */;
 			projectDirPath = "";
@@ -374,6 +383,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		01F5631B2F9A636400DCC190 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.9.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		01F5631C2F9A636400DCC190 /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 01F5631B2F9A636400DCC190 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 01607EF32D1883C80006DBE4 /* Project object */;
 }

@@ -1,8 +1,15 @@
 import SwiftUI
 import Cocoa
 import UserNotifications
+import Sparkle
 
 class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
+    lazy var updaterController = SPUStandardUpdaterController(
+        startingUpdater: false,
+        updaterDelegate: nil,
+        userDriverDelegate: nil
+    )
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         logInfo("Application did finish launching")
         // Just ensure we're not active
@@ -11,6 +18,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         }
         // Ensure notifications show while app is active/agent
         UNUserNotificationCenter.current().delegate = self
+        updaterController.startUpdater()
     }
     
     func applicationWillTerminate(_ notification: Notification) {
@@ -76,7 +84,8 @@ struct RamblrApp: App {
                        transcriptionManager: transcriptionManager,
                        coordinator: coordinator,
                        voiceMemosWatcher: voiceMemosWatcher,
-                       mediaPlaybackManager: mediaPlaybackManager)
+                       mediaPlaybackManager: mediaPlaybackManager,
+                       updater: appDelegate.updaterController.updater)
         } label: {
             Image("MenuBarIcon")
                 .renderingMode(.template)

@@ -1,2 +1,4 @@
 /.claude
 /build
+/dist
+/.env.release.local
