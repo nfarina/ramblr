@@ -4,6 +4,12 @@
 <dict>
     <key>com.apple.security.get-task-allow</key>
     <false/>
+    <!-- Required on Apple Silicon for microphone access. Xcode's automatic
+         signing adds this via ENABLE_RESOURCE_ACCESS_AUDIO_INPUT=YES, but
+         we bypass automatic signing in local-release-build.sh, so it has
+         to be explicit here. -->
+    <key>com.apple.security.device.audio-input</key>
+    <true/>
     <key>com.apple.security.automation.system-events</key>
     <true/>
     <key>com.apple.security.temporary-exception.accessibility</key>
