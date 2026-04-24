@@ -6,6 +6,20 @@
         <description>Updates for Ramblr</description>
         <language>en</language>
         <item>
+            <title>1.7.4</title>
+            <pubDate>Fri, 24 Apr 2026 11:03:37 -0700</pubDate>
+            <link>https://nfarina.github.io/ramblr</link>
+            <sparkle:fullReleaseNotesLink>https://github.com/nfarina/ramblr/releases/tag/v1.7.4</sparkle:fullReleaseNotesLink>
+            <sparkle:version>14</sparkle:version>
+            <sparkle:shortVersionString>1.7.4</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>15.2</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <description sparkle:format="markdown"><![CDATA[## What's new
+
+- Fixed audio permissions entitlement]]></description>
+            <enclosure url="https://github.com/nfarina/ramblr/releases/download/v1.7.4/Ramblr-1.7.4-macos.zip" length="2871176" type="application/octet-stream" sparkle:edSignature="uZH+4wgPSkWX2IcNcH+VDjknEw7dOMZ7yL3Ug3oxyk+ALMpYcDIBugMul5EAPbgaSm2IomlTQNLscRjJ6yW/Aw=="/>
+        </item>
+        <item>
             <title>1.7.3</title>
             <pubDate>Thu, 23 Apr 2026 10:34:13 -0700</pubDate>
             <link>https://nfarina.github.io/ramblr</link>
