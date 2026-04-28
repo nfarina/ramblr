@@ -43,6 +43,12 @@ I just wanted something I could use at cost. So I vibe-coded Ramblr. It's free t
 - macOS 13 or later
 - OpenAI API key
 
+For local source builds, install the media-control helper before building:
+
+```sh
+brew install media-control
+```
+
 ## Download
 
 You can [download the latest release here](https://github.com/nfarina/ramblr/releases) or just build it yourself from source in Xcode.

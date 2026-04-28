@@ -66,6 +66,19 @@ sign_sparkle_support_binaries() {
   sign_with_runtime "${framework_path}"
 }
 
+sign_bundled_media_adapter() {
+  local app_bundle_path="$1"
+  local adapter_path="${app_bundle_path}/Contents/Resources/MediaRemoteAdapter.dylib"
+
+  if [ ! -f "${adapter_path}" ]; then
+    echo "MediaRemoteAdapter.dylib not found inside the app bundle." >&2
+    echo "Install media-control before building Ramblr: brew install media-control" >&2
+    exit 1
+  fi
+
+  sign_with_runtime "${adapter_path}"
+}
+
 BUILD_CMD=(xcodebuild
   -scheme "${SCHEME}"
   -configuration "${CONFIGURATION}"
@@ -90,6 +103,7 @@ fi
 
 echo "Signing with Developer ID…"
 sign_sparkle_support_binaries "${APP_PATH}"
+sign_bundled_media_adapter "${APP_PATH}"
 
 APP_EXECUTABLE_PATH="${APP_PATH}/Contents/MacOS/${SCHEME}"
 remove_signature_if_present "${APP_EXECUTABLE_PATH}"

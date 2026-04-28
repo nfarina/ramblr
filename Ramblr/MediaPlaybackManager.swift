@@ -10,42 +10,106 @@ class MediaPlaybackManager: ObservableObject {
         }
     }
 
+    @Published private(set) var availabilityError: String?
+
     private var didWePauseMedia = false
+    private var didShowUnavailableAlert = false
     private var helperPath: String?
+    private var adapterPath: String?
+
+    private enum PlaybackState {
+        case playing
+        case stopped
+        case unavailable(String)
+    }
 
     init() {
         self.isEnabled = UserDefaults.standard.bool(forKey: "MediaPauseOnRecordEnabled")
-        self.helperPath = findHelper()
-        if let path = helperPath {
-            logInfo("MediaPlaybackManager: Found media-helper at \(path)")
-        } else {
-            logWarning("MediaPlaybackManager: media-helper not found in app bundle")
-        }
+        refreshAvailability()
     }
 
     // MARK: - Locate bundled helper
 
-    private func findHelper() -> String? {
-        // Look in the app bundle's Resources directory
-        if let path = Bundle.main.path(forResource: "media-helper", ofType: nil) {
-            if FileManager.default.isExecutableFile(atPath: path) {
-                return path
+    private func refreshAvailability() {
+        helperPath = nil
+        adapterPath = nil
+        availabilityError = nil
+
+        guard let path = Bundle.main.path(forResource: "media-helper", ofType: nil) else {
+            setUnavailable("media-helper is missing from the app bundle. Rebuild Ramblr after installing media-control.")
+            return
+        }
+
+        guard FileManager.default.isExecutableFile(atPath: path) else {
+            setUnavailable("media-helper is bundled but is not executable. Rebuild Ramblr.")
+            return
+        }
+
+        let resourcesURL = URL(fileURLWithPath: path).deletingLastPathComponent()
+        let adapterURL = resourcesURL.appendingPathComponent("MediaRemoteAdapter.dylib")
+        guard FileManager.default.fileExists(atPath: adapterURL.path) else {
+            setUnavailable("MediaRemoteAdapter.dylib is missing from the app bundle. Install media-control and rebuild Ramblr.")
+            return
+        }
+
+        helperPath = path
+        adapterPath = adapterURL.path
+        logInfo("MediaPlaybackManager: Found media-helper at \(path)")
+        logInfo("MediaPlaybackManager: Found MediaRemoteAdapter.dylib at \(adapterURL.path)")
+    }
+
+    private func setUnavailable(_ message: String) {
+        logError("MediaPlaybackManager: \(message)")
+
+        if Thread.isMainThread {
+            availabilityError = message
+        } else {
+            DispatchQueue.main.async {
+                self.availabilityError = message
             }
         }
-        return nil
+    }
+
+    private func reportUnavailable(_ message: String? = nil, completion: @escaping () -> Void) {
+        let message = message ?? availabilityError ?? "Pause media is unavailable because the media helper is not ready."
+        logError("MediaPlaybackManager: \(message)")
+
+        let showAlertAndContinue = {
+            self.availabilityError = message
+
+            if !self.didShowUnavailableAlert {
+                self.didShowUnavailableAlert = true
+
+                let alert = NSAlert()
+                alert.messageText = "Pause Media Unavailable"
+                alert.informativeText = message
+                alert.alertStyle = .warning
+                alert.addButton(withTitle: "OK")
+                alert.runModal()
+            }
+
+            completion()
+        }
+
+        if Thread.isMainThread {
+            showAlertAndContinue()
+        } else {
+            DispatchQueue.main.async(execute: showAlertAndContinue)
+        }
     }
 
     // MARK: - Run helper commands
 
-    private func runHelper(_ arguments: [String], timeout: TimeInterval = 5.0) -> String? {
+    private func runHelper(_ arguments: [String]) -> String? {
         guard let path = helperPath else { return nil }
 
         let proc = Process()
         proc.executableURL = URL(fileURLWithPath: path)
         proc.arguments = arguments
-        let pipe = Pipe()
-        proc.standardOutput = pipe
-        proc.standardError = FileHandle.nullDevice
+        let stdoutPipe = Pipe()
+        let stderrPipe = Pipe()
+        proc.standardOutput = stdoutPipe
+        proc.standardError = stderrPipe
 
         do {
             try proc.run()
@@ -55,14 +119,42 @@ class MediaPlaybackManager: ObservableObject {
         }
 
         proc.waitUntilExit()
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
-        return String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let stdoutData = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
+        let stderrData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
+        let stdout = String(data: stdoutData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let stderr = String(data: stderrData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+
+        if proc.terminationStatus != 0 {
+            let detail = stderr.isEmpty ? stdout : stderr
+            logError("MediaPlaybackManager: media-helper \(arguments.joined(separator: " ")) failed with exit code \(proc.terminationStatus): \(detail)")
+            return nil
+        }
+
+        if !stderr.isEmpty {
+            logWarning("MediaPlaybackManager: media-helper \(arguments.joined(separator: " ")) wrote stderr: \(stderr)")
+        }
+
+        return stdout
     }
 
-    private func isMediaPlaying() -> Bool {
-        guard let output = runHelper(["get-state"]) else { return false }
+    private func playbackState() -> PlaybackState {
+        guard let output = runHelper(["get-state"]) else {
+            logError("MediaPlaybackManager: Unable to determine media playback state")
+            return .unavailable("Pause media helper failed. Check the Ramblr log for details.")
+        }
+
         logInfo("MediaPlaybackManager: get-state = \(output)")
-        return output == "playing"
+
+        switch output {
+        case "playing":
+            return .playing
+        case "stopped":
+            return .stopped
+        default:
+            let detail = output.isEmpty ? "<empty>" : output
+            logError("MediaPlaybackManager: Unexpected media-helper get-state output: \(detail)")
+            return .unavailable("Pause media helper returned an unexpected playback state. Check the Ramblr log for details.")
+        }
     }
 
     // MARK: - Pause / Resume
@@ -70,17 +162,16 @@ class MediaPlaybackManager: ObservableObject {
     func pauseIfPlaying(completion: @escaping () -> Void) {
         guard isEnabled else { completion(); return }
 
-        guard helperPath != nil else {
-            logWarning("MediaPlaybackManager: media-helper not available, skipping")
-            completion()
+        guard availabilityError == nil, helperPath != nil, adapterPath != nil else {
+            reportUnavailable(completion: completion)
             return
         }
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { completion(); return }
-            let playing = self.isMediaPlaying()
 
-            if playing {
+            switch self.playbackState() {
+            case .playing:
                 logInfo("MediaPlaybackManager: Media is playing, pausing")
                 let result = self.runHelper(["pause"])
                 logInfo("MediaPlaybackManager: Pause result: \(result ?? "nil")")
@@ -88,11 +179,18 @@ class MediaPlaybackManager: ObservableObject {
                     self.didWePauseMedia = true
                     completion()
                 }
-            } else {
+
+            case .stopped:
                 logInfo("MediaPlaybackManager: Nothing playing, skipping pause")
                 DispatchQueue.main.async {
                     self.didWePauseMedia = false
                     completion()
+                }
+
+            case .unavailable(let message):
+                DispatchQueue.main.async {
+                    self.didWePauseMedia = false
+                    self.reportUnavailable(message, completion: completion)
                 }
             }
         }
@@ -102,19 +200,26 @@ class MediaPlaybackManager: ObservableObject {
         guard isEnabled, didWePauseMedia else { return }
         didWePauseMedia = false
 
-        guard helperPath != nil else { return }
+        guard availabilityError == nil, helperPath != nil, adapterPath != nil else {
+            logError("MediaPlaybackManager: Cannot resume media because pause media support is unavailable")
+            return
+        }
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
 
             // Check if still paused (user may have manually resumed during recording)
-            let playing = self.isMediaPlaying()
-            if !playing {
+            switch self.playbackState() {
+            case .stopped:
                 logInfo("MediaPlaybackManager: Resuming playback")
                 let result = self.runHelper(["play"])
                 logInfo("MediaPlaybackManager: Play result: \(result ?? "nil")")
-            } else {
+
+            case .playing:
                 logInfo("MediaPlaybackManager: Media already playing, skipping resume")
+
+            case .unavailable(let message):
+                self.setUnavailable(message)
             }
         }
     }

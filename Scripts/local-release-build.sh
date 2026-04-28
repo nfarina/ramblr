@@ -132,6 +132,19 @@ sign_sparkle_support_binaries() {
   sign_with_runtime "${framework_path}"
 }
 
+sign_bundled_media_adapter() {
+  local app_bundle_path="$1"
+  local adapter_path="${app_bundle_path}/Contents/Resources/MediaRemoteAdapter.dylib"
+
+  if [ ! -f "${adapter_path}" ]; then
+    echo "MediaRemoteAdapter.dylib not found inside the app bundle." >&2
+    echo "Install media-control before building Ramblr: brew install media-control" >&2
+    exit 1
+  fi
+
+  sign_with_runtime "${adapter_path}"
+}
+
 mkdir -p dist
 rm -f "${ZIP_PATH}"
 
@@ -165,6 +178,7 @@ fi
 
 echo "Signing distribution artifacts…"
 sign_sparkle_support_binaries "${APP_PATH}"
+sign_bundled_media_adapter "${APP_PATH}"
 
 APP_EXECUTABLE_PATH="${APP_PATH}/Contents/MacOS/${SCHEME}"
 remove_signature_if_present "${APP_EXECUTABLE_PATH}"
@@ -189,9 +203,26 @@ if [ "${SKIP_NOTARIZE}" = "true" ]; then
 fi
 
 echo "Submitting to notarytool (profile: ${NOTARY_PROFILE})…"
-xcrun notarytool submit "${ZIP_PATH}" \
+SUBMISSION_JSON="$(xcrun notarytool submit "${ZIP_PATH}" \
   --keychain-profile "${NOTARY_PROFILE}" \
-  --wait
+  --wait \
+  --output-format json)"
+printf '%s\n' "${SUBMISSION_JSON}"
+
+SUBMISSION_ID="$(printf '%s' "${SUBMISSION_JSON}" | plutil -extract id raw - 2>/dev/null || true)"
+SUBMISSION_STATUS="$(printf '%s' "${SUBMISSION_JSON}" | plutil -extract status raw - 2>/dev/null || true)"
+
+if [ "${SUBMISSION_STATUS}" != "Accepted" ]; then
+  echo "Notarization failed with status: ${SUBMISSION_STATUS:-unknown}" >&2
+  if [ -n "${SUBMISSION_ID}" ]; then
+    echo "Fetching notary log for ${SUBMISSION_ID}…" >&2
+    xcrun notarytool log "${SUBMISSION_ID}" \
+      --keychain-profile "${NOTARY_PROFILE}" \
+      --output-format json >&2 || true
+  fi
+  rm -f "${ZIP_PATH}"
+  exit 1
+fi
 
 # Stapling an app bundle embeds the notarization ticket, then we re-zip so the
 # downloadable artifact carries the ticket. Sparkle checks the ticket before

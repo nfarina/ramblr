@@ -40,7 +40,10 @@ struct MenuBarView: View {
             
             HStack {
                 Text("Status:")
-                if (autoPasteEnabled || mediaPlaybackManager.isEnabled) && !transcriptionManager.hasAccessibilityPermission {
+                if mediaPlaybackManager.isEnabled && mediaPlaybackManager.availabilityError != nil {
+                    Text("Media pause unavailable")
+                        .foregroundColor(.red)
+                } else if (autoPasteEnabled || mediaPlaybackManager.isEnabled) && !transcriptionManager.hasAccessibilityPermission {
                     Text("Needs Accessibility Permission")
                         .foregroundColor(.red)
                 } else if audioManager.isRecording {
@@ -120,6 +123,15 @@ struct MenuBarView: View {
                     if newValue {
                         transcriptionManager.checkAccessibilityPermission(shouldPrompt: true)
                     }
+                }
+
+                if mediaPlaybackManager.isEnabled, let mediaError = mediaPlaybackManager.availabilityError {
+                    HStack(alignment: .top, spacing: 4) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                        Text(mediaError)
+                    }
+                    .font(.caption)
+                    .foregroundColor(.red)
                 }
 
                 Divider().padding(.top, 6)
