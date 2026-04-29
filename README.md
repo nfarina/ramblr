@@ -9,7 +9,8 @@ Stop that!
 
 AI doesn't need your thoughts and instructions all nicely written out like this README is for humans. Rambling is better! Here's an example:
 
-<img width="512" height="512" alt="Ramblr ramble" src="https://github.com/user-attachments/assets/44f9a7ab-34c2-4780-9c58-747dd1e37afb"/>
+<img width="582" height="410" alt="Ramblr ramble" src="https://github.com/user-attachments/assets/44f9a7ab-34c2-4780-9c58-747dd1e37afb"/>
+<br/>
 
 Wow, that's a lot of text to read - but AI is *great* at reading lots of text like this, and this text is _full_ of useful information. Rambles better represent your true state of mind: you might repeat yourself if you're sure about something, or waffle when you're not. That's all signal.
 
