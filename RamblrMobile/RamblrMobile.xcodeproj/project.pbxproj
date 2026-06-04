@@ -1,0 +1,386 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		1D7A279674BB8F7B40A399FD /* RamblrKit in Frameworks */ = {isa = PBXBuildFile; productRef = CC1F9573D217594B85B87437 /* RamblrKit */; };
+		6F65B0C750F3CD99557346AC /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB416D89074D671274D557DA /* SettingsView.swift */; };
+		837C19FA1C8454FE30F1B9A6 /* RamblrMobileApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 935E37836A016541AAF2820E /* RamblrMobileApp.swift */; };
+		8932AF51723C3D872FF132F1 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000436D2D021DBD9203CEF39 /* AppModel.swift */; };
+		9EBC503B217953CD65C89577 /* StartRecordingIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77B36ED3283A397F6C496CB9 /* StartRecordingIntent.swift */; };
+		9EDBFC17FDF3C832C8E4D64B /* RecordingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEC43864EEE5FA6189FCB871 /* RecordingView.swift */; };
+		C60C9720A4C23128B6AA0E19 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D3C289467DFC0DECDF32DB6B /* Assets.xcassets */; };
+		CC82B98683BCD34C8A9172AA /* AudioRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 986436123F35D9297808BDE3 /* AudioRecorder.swift */; };
+		D42D03D45A9DA94C92E8989E /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDE3539FD212281EEED9F824 /* AppSettings.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		000436D2D021DBD9203CEF39 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
+		0E0F5F8CC2B2BF2DB363A0E3 /* RamblrKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = RamblrKit; path = ../RamblrKit; sourceTree = SOURCE_ROOT; };
+		77B36ED3283A397F6C496CB9 /* StartRecordingIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartRecordingIntent.swift; sourceTree = "<group>"; };
+		935E37836A016541AAF2820E /* RamblrMobileApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RamblrMobileApp.swift; sourceTree = "<group>"; };
+		986436123F35D9297808BDE3 /* AudioRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioRecorder.swift; sourceTree = "<group>"; };
+		BEC43864EEE5FA6189FCB871 /* RecordingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingView.swift; sourceTree = "<group>"; };
+		C8D16869F84AAB7E3C863B5E /* RamblrMobile.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = RamblrMobile.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		CB416D89074D671274D557DA /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		D3C289467DFC0DECDF32DB6B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		EDE3539FD212281EEED9F824 /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		08C548FE055B5152B5633254 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1D7A279674BB8F7B40A399FD /* RamblrKit in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		2B591CA3CDFE6EC1B92AA422 /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				0E0F5F8CC2B2BF2DB363A0E3 /* RamblrKit */,
+			);
+			name = Packages;
+			sourceTree = "<group>";
+		};
+		5F5C1C64022E1C4F2CB92112 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				000436D2D021DBD9203CEF39 /* AppModel.swift */,
+				EDE3539FD212281EEED9F824 /* AppSettings.swift */,
+				D3C289467DFC0DECDF32DB6B /* Assets.xcassets */,
+				986436123F35D9297808BDE3 /* AudioRecorder.swift */,
+				935E37836A016541AAF2820E /* RamblrMobileApp.swift */,
+				BEC43864EEE5FA6189FCB871 /* RecordingView.swift */,
+				CB416D89074D671274D557DA /* SettingsView.swift */,
+				77B36ED3283A397F6C496CB9 /* StartRecordingIntent.swift */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		75CC830E3E829BA2E3940EB6 = {
+			isa = PBXGroup;
+			children = (
+				2B591CA3CDFE6EC1B92AA422 /* Packages */,
+				5F5C1C64022E1C4F2CB92112 /* Sources */,
+				F386303ECFAC9E774612090D /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		F386303ECFAC9E774612090D /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				C8D16869F84AAB7E3C863B5E /* RamblrMobile.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		B4B4C228EDB1E22C6426E557 /* RamblrMobile */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 81E48A408D57D6A867304F0E /* Build configuration list for PBXNativeTarget "RamblrMobile" */;
+			buildPhases = (
+				10FAD8F5F9E35FD627A4502B /* Sources */,
+				01E927BB3624B77298A830A8 /* Resources */,
+				08C548FE055B5152B5633254 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = RamblrMobile;
+			packageProductDependencies = (
+				CC1F9573D217594B85B87437 /* RamblrKit */,
+			);
+			productName = RamblrMobile;
+			productReference = C8D16869F84AAB7E3C863B5E /* RamblrMobile.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		9E15D00C79B230AA2F3332DE /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					B4B4C228EDB1E22C6426E557 = {
+						DevelopmentTeam = RCRD96UZHN;
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = B1D2C93E07B1F9C8EFDFD97E /* Build configuration list for PBXProject "RamblrMobile" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 75CC830E3E829BA2E3940EB6;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				ECF884E206993E884638E015 /* XCLocalSwiftPackageReference "../RamblrKit" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = F386303ECFAC9E774612090D /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				B4B4C228EDB1E22C6426E557 /* RamblrMobile */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		01E927BB3624B77298A830A8 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C60C9720A4C23128B6AA0E19 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		10FAD8F5F9E35FD627A4502B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8932AF51723C3D872FF132F1 /* AppModel.swift in Sources */,
+				D42D03D45A9DA94C92E8989E /* AppSettings.swift in Sources */,
+				CC82B98683BCD34C8A9172AA /* AudioRecorder.swift in Sources */,
+				837C19FA1C8454FE30F1B9A6 /* RamblrMobileApp.swift in Sources */,
+				9EDBFC17FDF3C832C8E4D64B /* RecordingView.swift in Sources */,
+				6F65B0C750F3CD99557346AC /* SettingsView.swift in Sources */,
+				9EBC503B217953CD65C89577 /* StartRecordingIntent.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		24F0B9A649D396D323478D38 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		6D7CF13BAF52007ECB717DF4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = RCRD96UZHN;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Ramblr;
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Ramblr records your voice to transcribe it with Whisper.";
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.nfarina.RamblrMobile;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.9;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		B6EA8E2FA864B4963F16F5A0 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		C3ACD5B9C582873930C9573F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = RCRD96UZHN;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Ramblr;
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Ramblr records your voice to transcribe it with Whisper.";
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.nfarina.RamblrMobile;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.9;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		81E48A408D57D6A867304F0E /* Build configuration list for PBXNativeTarget "RamblrMobile" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C3ACD5B9C582873930C9573F /* Debug */,
+				6D7CF13BAF52007ECB717DF4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		B1D2C93E07B1F9C8EFDFD97E /* Build configuration list for PBXProject "RamblrMobile" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B6EA8E2FA864B4963F16F5A0 /* Debug */,
+				24F0B9A649D396D323478D38 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		ECF884E206993E884638E015 /* XCLocalSwiftPackageReference "../RamblrKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../RamblrKit;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		CC1F9573D217594B85B87437 /* RamblrKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = RamblrKit;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 9E15D00C79B230AA2F3332DE /* Project object */;
+}
