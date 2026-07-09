@@ -17,6 +17,14 @@ targets:
       - path: Sources
     dependencies:
       - package: RamblrKit
+    info:
+      path: Sources/Info.plist
+      properties:
+        CFBundleDisplayName: Ramblr
+        UILaunchScreen: {}
+        NSMicrophoneUsageDescription: "Ramblr records your voice to transcribe it with Whisper."
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        UIBackgroundModes: [audio]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.nfarina.RamblrMobile
@@ -24,12 +32,7 @@ targets:
         CURRENT_PROJECT_VERSION: "1"
         DEVELOPMENT_TEAM: RCRD96UZHN
         CODE_SIGN_STYLE: Automatic
-        GENERATE_INFOPLIST_FILE: YES
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         ENABLE_USER_SCRIPT_SANDBOXING: YES
         SWIFT_VERSION: "5.9"
         TARGETED_DEVICE_FAMILY: "1,2"
-        INFOPLIST_KEY_UILaunchScreen_Generation: YES
-        INFOPLIST_KEY_NSMicrophoneUsageDescription: "Ramblr records your voice to transcribe it with Whisper."
-        INFOPLIST_KEY_UISupportedInterfaceOrientations: "UIInterfaceOrientationPortrait"
-        INFOPLIST_KEY_CFBundleDisplayName: "Ramblr"

@@ -3,36 +3,9 @@ import AppKit
 import CoreGraphics
 import UserNotifications
 import AVFoundation
+import RamblrKit
 
-// Enumeration for transcription errors
-enum TranscriptionError: Error {
-    case networkError(Error)
-    case apiError(Int, String)
-    case noData
-    case decodingError
-    case noAPIKey
-    case fileError(String)
-    case timeout
-    
-    var description: String {
-        switch self {
-        case .networkError(let error):
-            return "Network error: \(error.localizedDescription)"
-        case .apiError(let code, let message):
-            return "API error (code \(code)): \(message)"
-        case .noData:
-            return "No data received from API"
-        case .decodingError:
-            return "Failed to decode API response"
-        case .noAPIKey:
-            return "No API key provided"
-        case .fileError(let message):
-            return "File error: \(message)"
-        case .timeout:
-            return "Request timed out"
-        }
-    }
-}
+// `TranscriptionError` now lives in RamblrKit (shared with the iOS app).
 
 class TranscriptionManager: ObservableObject {
     @Published var isTranscribing = false
@@ -356,179 +329,44 @@ class TranscriptionManager: ObservableObject {
         return size
     }
     
-    // Core request logic extracted to a separate method
+    // Core request logic — delegates to RamblrKit's shared TranscriptionService.
+    // Retry and chunking are still orchestrated by performTranscriptionWithRetry,
+    // so this issues a single (non-retrying) request.
     private func performTranscriptionRequest(audioURL: URL, completion: @escaping (Result<String, TranscriptionError>) -> Void) {
-        // Determine provider and model name
-        let parts = transcriptionModel.split(separator: ":", maxSplits: 1, omittingEmptySubsequences: false)
-        let provider = parts.count == 2 ? String(parts[0]) : "openai"
-        let modelNameRaw = parts.count == 2 ? String(parts[1]) : transcriptionModel
-        let useGroq = (provider == "groq")
-        let selectedKey = useGroq ? groqApiKey : apiKey
-        let authKey = selectedKey?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        
+        let model = TranscriptionModel(identifier: transcriptionModel)
+        let authKey = (model.provider == .groq ? groqApiKey : apiKey)?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+
         // Fail fast if the chosen provider has no key
         guard !authKey.isEmpty else {
-            let providerName = useGroq ? "Groq" : "OpenAI"
-            logError("Transcription error: No API key provided for \(providerName)")
+            logError("Transcription error: No API key provided for \(model.provider.displayName)")
             completion(.failure(.noAPIKey))
             return
         }
-        
+
         DispatchQueue.main.async {
             self.isTranscribing = true
         }
-        
-        // Groq uses OpenAI-compatible path under /openai
-        let baseURL = useGroq ? "https://api.groq.com/openai" : "https://api.openai.com"
-        let url = URL(string: "\(baseURL)/v1/audio/transcriptions")!
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("Bearer \(authKey)", forHTTPHeaderField: "Authorization")
-        
-        // Set timeout
-        request.timeoutInterval = requestTimeout
-        
-        let boundary = UUID().uuidString
-        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
-        
-        var data = Data()
-        
-        // Add audio file
-        data.append("--\(boundary)\r\n".data(using: .utf8)!)
-        data.append("Content-Disposition: form-data; name=\"file\"; filename=\"recording.wav\"\r\n".data(using: .utf8)!)
-        data.append("Content-Type: audio/wav\r\n\r\n".data(using: .utf8)!)
-        
-        do {
-            let audioData = try Data(contentsOf: audioURL)
-            let audioFileSize = audioData.count
-            logInfo("Audio file size being sent to API: \(audioFileSize) bytes")
-            data.append(audioData)
-        } catch {
-            logError("Error reading audio file: \(error)")
+
+        let service = TranscriptionService(requestTimeout: requestTimeout, maxRetries: 0) { message in
+            logInfo(message)
+        }
+
+        Task {
+            let result: Result<String, TranscriptionError>
+            do {
+                let text = try await service.transcribe(audioURL: audioURL, model: model, apiKey: authKey)
+                result = .success(text)
+            } catch let error as TranscriptionError {
+                result = .failure(error)
+            } catch {
+                result = .failure(.networkError(error))
+            }
             DispatchQueue.main.async {
                 self.isTranscribing = false
+                completion(result)
             }
-            completion(.failure(.fileError(error.localizedDescription)))
-            return
         }
-        
-        data.append("\r\n".data(using: .utf8)!)
-        
-        // Add model parameter
-        data.append("--\(boundary)\r\n".data(using: .utf8)!)
-        data.append("Content-Disposition: form-data; name=\"model\"\r\n\r\n".data(using: .utf8)!)
-        // Groq expects whisper-large-v3; OpenAI accepts whisper-1 or gpt-4o(-mini)-transcribe
-        let modelForAPI: String = {
-            if useGroq { return "whisper-large-v3" }
-            return modelNameRaw
-        }()
-        data.append("\(modelForAPI)\r\n".data(using: .utf8)!)
-        
-        // Add temperature parameter for stability
-        data.append("--\(boundary)\r\n".data(using: .utf8)!)
-        data.append("Content-Disposition: form-data; name=\"temperature\"\r\n\r\n".data(using: .utf8)!)
-        data.append("0.0\r\n".data(using: .utf8)!)
-        
-        // Add final boundary
-        data.append("--\(boundary)--\r\n".data(using: .utf8)!)
-        
-        request.httpBody = data
-        
-        // Create a dedicated session with configuration
-        let config = URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = requestTimeout
-        config.timeoutIntervalForResource = requestTimeout * 2
-        config.waitsForConnectivity = true
-        
-        let session = URLSession(configuration: config)
-        
-        session.dataTask(with: request) { [weak self] data, response, error in
-            // Always mark transcription as done on main thread
-            DispatchQueue.main.async {
-                self?.isTranscribing = false
-            }
-            
-            // Handle session cleanup
-            session.finishTasksAndInvalidate()
-            
-            // Handle errors
-            if let error = error {
-                let nsError = error as NSError
-                
-                // Special handling for timeout
-                if nsError.domain == NSURLErrorDomain && 
-                   (nsError.code == NSURLErrorTimedOut || nsError.code == NSURLErrorNetworkConnectionLost) {
-                    logError("Transcription timed out: \(error.localizedDescription)")
-                    completion(.failure(.timeout))
-                    return
-                }
-                
-                logError("Transcription network error: \(error.localizedDescription)")
-                logError("Error domain: \(nsError.domain), code: \(nsError.code)")
-                completion(.failure(.networkError(error)))
-                return
-            }
-            
-            // Check HTTP status code
-            if let httpResponse = response as? HTTPURLResponse {
-                logInfo("Transcription API response status: \(httpResponse.statusCode)")
-                
-                if httpResponse.statusCode != 200 {
-                    logError("Transcription API error: Non-200 status code (\(httpResponse.statusCode))")
-                    
-                    var errorMessage = "Unknown error"
-                    
-                    if let data = data, let errorJson = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                        logError("API error response: \(errorJson)")
-                        if let errorObj = errorJson["error"] as? [String: Any], 
-                           let message = errorObj["message"] as? String {
-                            errorMessage = message
-                            logError("Error message: \(message)")
-                        }
-                    }
-                    
-                    completion(.failure(.apiError(httpResponse.statusCode, errorMessage)))
-                    return
-                }
-            }
-            
-            // Check for data
-            guard let data = data else {
-                logError("Transcription error: No data received from API")
-                completion(.failure(.noData))
-                return
-            }
-            
-            // Parse response
-            do {
-                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                    if let text = json["text"] as? String {
-                        logInfo("Transcription successful, received text of length: \(text.count)")
-                        completion(.success(text))
-                    } else {
-                        logError("Transcription error: Response missing 'text' field")
-                        logError("Full API response: \(json)")
-                        completion(.failure(.decodingError))
-                    }
-                } else {
-                    logError("Transcription error: Invalid JSON response")
-                    
-                    if let responseString = String(data: data, encoding: .utf8) {
-                        logError("Raw API response: \(responseString)")
-                    }
-                    
-                    completion(.failure(.decodingError))
-                }
-            } catch {
-                logError("Transcription JSON parsing error: \(error)")
-                
-                if let responseString = String(data: data, encoding: .utf8) {
-                    logError("Raw API response: \(responseString)")
-                }
-                
-                completion(.failure(.decodingError))
-            }
-        }.resume()
     }
     
     func pasteText(_ text: String) {

@@ -21,6 +21,7 @@
 /* Begin PBXFileReference section */
 		000436D2D021DBD9203CEF39 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
 		0E0F5F8CC2B2BF2DB363A0E3 /* RamblrKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = RamblrKit; path = ../RamblrKit; sourceTree = SOURCE_ROOT; };
+		46A780E753913E08371CDE24 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		77B36ED3283A397F6C496CB9 /* StartRecordingIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartRecordingIntent.swift; sourceTree = "<group>"; };
 		935E37836A016541AAF2820E /* RamblrMobileApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RamblrMobileApp.swift; sourceTree = "<group>"; };
 		986436123F35D9297808BDE3 /* AudioRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioRecorder.swift; sourceTree = "<group>"; };
@@ -58,6 +59,7 @@
 				EDE3539FD212281EEED9F824 /* AppSettings.swift */,
 				D3C289467DFC0DECDF32DB6B /* Assets.xcassets */,
 				986436123F35D9297808BDE3 /* AudioRecorder.swift */,
+				46A780E753913E08371CDE24 /* Info.plist */,
 				935E37836A016541AAF2820E /* RamblrMobileApp.swift */,
 				BEC43864EEE5FA6189FCB871 /* RecordingView.swift */,
 				CB416D89074D671274D557DA /* SettingsView.swift */,
@@ -238,11 +240,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = RCRD96UZHN;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = Ramblr;
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Ramblr records your voice to transcribe it with Whisper.";
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_FILE = Sources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -328,11 +326,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = RCRD96UZHN;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = Ramblr;
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Ramblr records your voice to transcribe it with Whisper.";
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_FILE = Sources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",

@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		01F5631D2F9A636400DCC190 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 01F5631C2F9A636400DCC190 /* Sparkle */; };
+		AFF6F40CEC703577739B077E /* RamblrKit in Frameworks */ = {isa = PBXBuildFile; productRef = 744F53C5E4A106D3F80AE1A9 /* RamblrKit */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -41,6 +42,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				01F5631D2F9A636400DCC190 /* Sparkle in Frameworks */,
+				AFF6F40CEC703577739B077E /* RamblrKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -85,6 +87,7 @@
 			name = Ramblr;
 			packageProductDependencies = (
 				01F5631C2F9A636400DCC190 /* Sparkle */,
+				744F53C5E4A106D3F80AE1A9 /* RamblrKit */,
 			);
 			productName = Ramblr;
 			productReference = 01607EFB2D1883C80006DBE4 /* Ramblr.app */;
@@ -116,6 +119,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				01F5631B2F9A636400DCC190 /* XCRemoteSwiftPackageReference "Sparkle" */,
+				BA10DB9036419C016436DAE9 /* XCLocalSwiftPackageReference "RamblrKit" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 01607EFC2D1883C80006DBE4 /* Products */;
@@ -384,6 +388,13 @@
 		};
 /* End XCConfigurationList section */
 
+/* Begin XCLocalSwiftPackageReference section */
+		BA10DB9036419C016436DAE9 /* XCLocalSwiftPackageReference "RamblrKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = RamblrKit;
+		};
+/* End XCLocalSwiftPackageReference section */
+
 /* Begin XCRemoteSwiftPackageReference section */
 		01F5631B2F9A636400DCC190 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
 			isa = XCRemoteSwiftPackageReference;
@@ -400,6 +411,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 01F5631B2F9A636400DCC190 /* XCRemoteSwiftPackageReference "Sparkle" */;
 			productName = Sparkle;
+		};
+		744F53C5E4A106D3F80AE1A9 /* RamblrKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BA10DB9036419C016436DAE9 /* XCLocalSwiftPackageReference "RamblrKit" */;
+			productName = RamblrKit;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
