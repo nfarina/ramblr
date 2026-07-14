@@ -435,13 +435,15 @@ struct MenuBarView: View {
         ModelSetupPanel.shared.show(
             model: transcriptionManager.transcriptionModel,
             openAIKey: apiKey,
-            groqKey: groqApiKey
-        ) { newModel, newOpenAIKey, newGroqKey in
+            groqKey: groqApiKey,
+            vocabularyHints: transcriptionManager.vocabularyHints
+        ) { newModel, newOpenAIKey, newGroqKey, newVocabularyHints in
             apiKey = newOpenAIKey
             groqApiKey = newGroqKey
             transcriptionManager.setAPIKey(newOpenAIKey)
             transcriptionManager.setGroqAPIKey(newGroqKey)
             transcriptionManager.setTranscriptionModel(newModel)
+            transcriptionManager.setVocabularyHints(newVocabularyHints)
         }
     }
 

@@ -15,8 +15,10 @@ class TranscriptionManager: ObservableObject {
     private var apiKey: String?
     private var groqApiKey: String?
     private let modelDefaultsKey = "TranscriptionModel"
+    private let vocabularyHintsDefaultsKey = "TranscriptionVocabularyHints"
     // Provider-prefixed model id, e.g. "openai:whisper-1", "groq:whisper-large-v3"
     @Published private(set) var transcriptionModel: String = "openai:whisper-1"
+    @Published private(set) var vocabularyHints: String = ""
 
     // Save-to-folder configuration
     @Published var saveFolderPath: String?
@@ -31,12 +33,14 @@ class TranscriptionManager: ObservableObject {
     private let requestTimeout: TimeInterval = 15.0 // 15 seconds timeout as requested
     private let maxUploadBytes = 19 * 1024 * 1024
     private let chunkSafetyMarginBytes = 64 * 1024
+    private let minimumChunkDuration: TimeInterval = 0.1
     
     init() {
         loadAPIKey()
         loadGroqAPIKey()
         loadHistory()
         loadTranscriptionModel()
+        loadVocabularyHints()
         loadSaveFolderSettings()
         // Do not prompt on startup unless auto-paste is enabled
         let autoPasteEnabled = (UserDefaults.standard.object(forKey: "AutoPasteEnabled") as? Bool) ?? false
@@ -85,6 +89,26 @@ class TranscriptionManager: ObservableObject {
         transcriptionModel = model
         UserDefaults.standard.set(model, forKey: modelDefaultsKey)
         logInfo("Transcription model set to: \(model)")
+    }
+
+    private func loadVocabularyHints() {
+        vocabularyHints = UserDefaults.standard.string(forKey: vocabularyHintsDefaultsKey) ?? ""
+    }
+
+    func setVocabularyHints(_ hints: String) {
+        vocabularyHints = hints
+        UserDefaults.standard.set(hints, forKey: vocabularyHintsDefaultsKey)
+    }
+
+    private func vocabularyPrompt() -> String? {
+        let terms = vocabularyHints
+            .components(separatedBy: CharacterSet(charactersIn: ",\n"))
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+
+        guard !terms.isEmpty else { return nil }
+        let list = terms.joined(separator: ", ")
+        return "This transcript may mention \(list). Relevant names and terms include \(list)."
     }
 
     var modelDisplayName: String {
@@ -156,8 +180,12 @@ class TranscriptionManager: ObservableObject {
                 case .failure(let error):
                     logError("Transcription attempt \(currentRetry + 1) failed: \(error.description)")
 
-                    if case .noAPIKey = error {
-                        self.updateStatus("Add your API key in Settings")
+                    if !error.isRetriable {
+                        if case .noAPIKey = error {
+                            self.updateStatus("Add your API key in Settings")
+                        } else {
+                            self.updateStatus("")
+                        }
                         completion(nil)
                         return
                     }
@@ -279,6 +307,9 @@ class TranscriptionManager: ObservableObject {
 
         let maxChunkBytes = maxUploadBytes - chunkSafetyMarginBytes
         let maxFramesPerChunk = max(1, maxChunkBytes / outputBytesPerFrame)
+        let minimumChunkFrames = AVAudioFramePosition(
+            ceil(minimumChunkDuration * readFormat.sampleRate)
+        )
         var chunkURLs: [URL] = []
         var chunkIndex = 0
 
@@ -294,9 +325,26 @@ class TranscriptionManager: ObservableObject {
             try audioFile.read(into: buffer, frameCount: framesToRead)
             if buffer.frameLength == 0 { break }
 
+            // AVAudioFile can expose a tiny decoder/converter tail at EOF. It is
+            // too short for transcription and may produce a header-only WAV.
+            if AVAudioFramePosition(buffer.frameLength) < minimumChunkFrames {
+                logInfo("Skipping trailing audio chunk with only \(buffer.frameLength) frames")
+                break
+            }
+
             let chunkURL = makeChunkURL(index: chunkIndex)
             let chunkFile = try AVAudioFile(forWriting: chunkURL, settings: outputFormat.settings)
             try chunkFile.write(from: buffer)
+            chunkFile.close()
+
+            let writtenFile = try AVAudioFile(forReading: chunkURL)
+            let writtenDuration = Double(writtenFile.length) / writtenFile.fileFormat.sampleRate
+            writtenFile.close()
+            guard writtenDuration >= minimumChunkDuration else {
+                try? FileManager.default.removeItem(at: chunkURL)
+                logInfo("Skipping trailing audio chunk with duration \(writtenDuration) seconds")
+                break
+            }
 
             if let chunkSize = fileSize(at: chunkURL), chunkSize > Int64(maxUploadBytes) {
                 throw TranscriptionError.fileError("Chunk exceeded size limit")
@@ -355,7 +403,12 @@ class TranscriptionManager: ObservableObject {
         Task {
             let result: Result<String, TranscriptionError>
             do {
-                let text = try await service.transcribe(audioURL: audioURL, model: model, apiKey: authKey)
+                let text = try await service.transcribe(
+                    audioURL: audioURL,
+                    model: model,
+                    apiKey: authKey,
+                    prompt: vocabularyPrompt()
+                )
                 result = .success(text)
             } catch let error as TranscriptionError {
                 result = .failure(error)

@@ -9,7 +9,8 @@ final class ModelSetupPanel {
         model: String,
         openAIKey: String,
         groqKey: String,
-        onSave: @escaping (String, String, String) -> Void
+        vocabularyHints: String,
+        onSave: @escaping (String, String, String, String) -> Void
     ) {
         if let win = window {
             win.makeKeyAndOrderFront(nil)
@@ -20,9 +21,10 @@ final class ModelSetupPanel {
         let content = ModelSetupView(
             initialModel: model,
             initialOpenAIKey: openAIKey,
-            initialGroqKey: groqKey
-        ) { model, openAIKey, groqKey in
-            onSave(model, openAIKey, groqKey)
+            initialGroqKey: groqKey,
+            initialVocabularyHints: vocabularyHints
+        ) { model, openAIKey, groqKey, vocabularyHints in
+            onSave(model, openAIKey, groqKey, vocabularyHints)
             self.close()
         } onCancel: {
             self.close()
@@ -35,7 +37,7 @@ final class ModelSetupPanel {
         panel.isFloatingPanel = true
         panel.hidesOnDeactivate = false
         panel.level = .floating
-        panel.setContentSize(NSSize(width: 440, height: 240))
+        panel.setContentSize(NSSize(width: 440, height: 310))
         panel.center()
 
         self.window = panel
@@ -50,17 +52,19 @@ final class ModelSetupPanel {
 }
 
 private struct ModelSetupView: View {
-    let onSave: (String, String, String) -> Void
+    let onSave: (String, String, String, String) -> Void
     let onCancel: () -> Void
     @State private var model: String
     @State private var openAIKey: String
     @State private var groqKey: String
+    @State private var vocabularyHints: String
 
     init(
         initialModel: String,
         initialOpenAIKey: String,
         initialGroqKey: String,
-        onSave: @escaping (String, String, String) -> Void,
+        initialVocabularyHints: String,
+        onSave: @escaping (String, String, String, String) -> Void,
         onCancel: @escaping () -> Void
     ) {
         self.onSave = onSave
@@ -68,6 +72,7 @@ private struct ModelSetupView: View {
         _model = State(initialValue: initialModel)
         _openAIKey = State(initialValue: initialOpenAIKey)
         _groqKey = State(initialValue: initialGroqKey)
+        _vocabularyHints = State(initialValue: initialVocabularyHints)
     }
 
     private var needsOpenAI: Bool {
@@ -132,11 +137,21 @@ private struct ModelSetupView: View {
                     .foregroundColor(.orange)
             }
 
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Vocabulary hints:")
+                TextField("AcmeCloud, NexaDB", text: $vocabularyHints, axis: .vertical)
+                    .textFieldStyle(.roundedBorder)
+                    .lineLimit(1...3)
+                Text("Correct spellings only, separated by commas. Keep the list concise.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
             HStack {
                 Spacer()
                 Button("Cancel") { onCancel() }
                 Button("Save") {
-                    onSave(model, openAIKey, groqKey)
+                    onSave(model, openAIKey, groqKey, vocabularyHints)
                 }
                 .keyboardShortcut(.defaultAction)
             }

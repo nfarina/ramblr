@@ -16,6 +16,7 @@ class AudioManager: NSObject, ObservableObject {
     // Audio analysis parameters
     private var totalSamples: Int = 0
     private var silentSamples: Int = 0
+    private var analysisSampleRate: Double = 16000
     
     // This was a good idea but introduces the possibility of dropping a recording you want which is not acceptable,
     // so I've nerfed all the values.
@@ -83,6 +84,7 @@ class AudioManager: NSObject, ObservableObject {
         audioEngine.attach(volumeMeter)
         
         let inputFormat = inputNode.inputFormat(forBus: 0)
+        analysisSampleRate = inputFormat.sampleRate
         let whisperFormat = AVAudioFormat(commonFormat: .pcmFormatFloat32,
                                         sampleRate: 16000,
                                         channels: 1,
@@ -236,8 +238,10 @@ class AudioManager: NSObject, ObservableObject {
     }
     
     private func isRecordingValid() -> Bool {
-        // Check minimum duration (16000 samples per second for our format)
-        let duration = TimeInterval(totalSamples) / 16000
+        // Silence analysis runs on the input buffer, so use its sample rate.
+        let duration = analysisSampleRate > 0
+            ? TimeInterval(totalSamples) / analysisSampleRate
+            : 0
         if duration < minimumDuration {
             logInfo("Recording too short: \(duration) seconds")
             return false
@@ -247,7 +251,9 @@ class AudioManager: NSObject, ObservableObject {
         }
         
         // Check silence percentage
-        let silencePercentage = Float(silentSamples) / Float(totalSamples)
+        let silencePercentage = totalSamples > 0
+            ? Float(silentSamples) / Float(totalSamples)
+            : 0
         if silencePercentage > maximumSilencePercentage {
             logInfo("Too much silence: \(silencePercentage * 100)%")
             return false

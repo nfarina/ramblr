@@ -32,12 +32,18 @@ public struct TranscriptionService: Sendable {
     public func transcribeWithRetry(
         audioURL: URL,
         model: TranscriptionModel,
-        apiKey: String
+        apiKey: String,
+        prompt: String? = nil
     ) async throws -> String {
         var attempt = 0
         while true {
             do {
-                return try await transcribe(audioURL: audioURL, model: model, apiKey: apiKey)
+                return try await transcribe(
+                    audioURL: audioURL,
+                    model: model,
+                    apiKey: apiKey,
+                    prompt: prompt
+                )
             } catch let error as TranscriptionError {
                 attempt += 1
                 guard error.isRetriable, attempt <= maxRetries else { throw error }
@@ -53,7 +59,8 @@ public struct TranscriptionService: Sendable {
     public func transcribe(
         audioURL: URL,
         model: TranscriptionModel,
-        apiKey: String
+        apiKey: String,
+        prompt: String? = nil
     ) async throws -> String {
         let authKey = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !authKey.isEmpty else {
@@ -88,7 +95,8 @@ public struct TranscriptionService: Sendable {
             audioData: audioData,
             filename: filename,
             mimeType: mimeType,
-            model: modelForAPI
+            model: modelForAPI,
+            prompt: prompt
         )
         log("Audio file size being sent to API: \(audioData.count) bytes")
 
@@ -150,7 +158,8 @@ public struct TranscriptionService: Sendable {
         audioData: Data,
         filename: String,
         mimeType: String,
-        model: String
+        model: String,
+        prompt: String? = nil
     ) -> Data {
         var data = Data()
         func append(_ string: String) { data.append(string.data(using: .utf8)!) }
@@ -164,6 +173,13 @@ public struct TranscriptionService: Sendable {
         append("--\(boundary)\r\n")
         append("Content-Disposition: form-data; name=\"model\"\r\n\r\n")
         append("\(model)\r\n")
+
+        if let prompt = prompt?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !prompt.isEmpty {
+            append("--\(boundary)\r\n")
+            append("Content-Disposition: form-data; name=\"prompt\"\r\n\r\n")
+            append("\(prompt)\r\n")
+        }
 
         // Temperature 0 for deterministic, stable output (matches macOS app).
         append("--\(boundary)\r\n")
