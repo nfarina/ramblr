@@ -6,6 +6,22 @@
         <description>Updates for Ramblr</description>
         <language>en</language>
         <item>
+            <title>1.8.1</title>
+            <pubDate>Thu, 16 Jul 2026 15:14:38 -0700</pubDate>
+            <link>https://nfarina.github.io/ramblr</link>
+            <sparkle:fullReleaseNotesLink>https://github.com/nfarina/ramblr/releases/tag/v1.8.1</sparkle:fullReleaseNotesLink>
+            <sparkle:version>19</sparkle:version>
+            <sparkle:shortVersionString>1.8.1</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>15.2</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <description sparkle:format="markdown"><![CDATA[## What's new
+
+- Removed transcription vocabulary prompts because they could inject configured terms into dictation even when those words were not spoken.
+- Transcriptions now use the original unbiased request behavior again.
+]]></description>
+            <enclosure url="https://github.com/nfarina/ramblr/releases/download/v1.8.1/Ramblr-1.8.1-macos.zip" length="2929518" type="application/octet-stream" sparkle:edSignature="LCfW0mymmiRsTONecedpyfSqtYIvuRX+Szcr5MPNQqKEv6Ja8OzYSUHwj72haTW1Yh3PQCXMl9fjMlf5r1ddCg=="/>
+        </item>
+        <item>
             <title>1.8.0</title>
             <pubDate>Tue, 14 Jul 2026 09:27:41 -0700</pubDate>
             <link>https://nfarina.github.io/ramblr</link>
@@ -32,20 +48,6 @@
 
 - Fix for transcribing audio files with certain lengths]]></description>
             <enclosure url="https://github.com/nfarina/ramblr/releases/download/v1.7.6/Ramblr-1.7.6-macos.zip" length="2929512" type="application/octet-stream" sparkle:edSignature="By5o0jwkmcwCupoPmEZjpaSGV3sqOp7Aqc41epeYW/2abnFR+5t8ldMzLG28H3jAj8xyNo2Hupr0MNHQwgdxCg=="/>
-        </item>
-        <item>
-            <title>1.7.5</title>
-            <pubDate>Tue, 28 Apr 2026 15:37:18 -0700</pubDate>
-            <link>https://nfarina.github.io/ramblr</link>
-            <sparkle:fullReleaseNotesLink>https://github.com/nfarina/ramblr/releases/tag/v1.7.5</sparkle:fullReleaseNotesLink>
-            <sparkle:version>16</sparkle:version>
-            <sparkle:shortVersionString>1.7.5</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>15.2</sparkle:minimumSystemVersion>
-            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <description sparkle:format="markdown"><![CDATA[## What's new
-
-- Fixed "Paused media while recording" feature.]]></description>
-            <enclosure url="https://github.com/nfarina/ramblr/releases/download/v1.7.5/Ramblr-1.7.5-macos.zip" length="2916322" type="application/octet-stream" sparkle:edSignature="VyCY2o3PEaE51uTiikRLfAIsuNlOjYvZk2PbIGsW7vXZ2Hwppoh9TCPyonK+KBL+Q21ZuQnAHYqiBnqqwmajAQ=="/>
         </item>
     </channel>
 </rss>
