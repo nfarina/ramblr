@@ -34,31 +34,15 @@ final class RamblrKitTests: XCTestCase {
             audioData: Data([0x01, 0x02, 0x03]),
             filename: "recording.wav",
             mimeType: "audio/wav",
-            model: "whisper-large-v3",
-            prompt: "AcmeCloud, NexaDB"
+            model: "whisper-large-v3"
         )
         let string = String(decoding: body, as: UTF8.self)
         XCTAssertTrue(string.contains("--BOUND\r\n"))
         XCTAssertTrue(string.contains("filename=\"recording.wav\""))
         XCTAssertTrue(string.contains("name=\"model\""))
         XCTAssertTrue(string.contains("whisper-large-v3"))
-        XCTAssertTrue(string.contains("name=\"prompt\""))
-        XCTAssertTrue(string.contains("AcmeCloud, NexaDB"))
         XCTAssertTrue(string.contains("name=\"temperature\""))
         XCTAssertTrue(string.contains("--BOUND--\r\n"))
-    }
-
-    func testMultipartBodyOmitsEmptyPrompt() {
-        let body = TranscriptionService.multipartBody(
-            boundary: "BOUND",
-            audioData: Data(),
-            filename: "recording.wav",
-            mimeType: "audio/wav",
-            model: "whisper-1",
-            prompt: "  \n"
-        )
-        let string = String(decoding: body, as: UTF8.self)
-        XCTAssertFalse(string.contains("name=\"prompt\""))
     }
 
     func testErrorRetriability() {

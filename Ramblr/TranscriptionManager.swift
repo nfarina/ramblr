@@ -15,10 +15,8 @@ class TranscriptionManager: ObservableObject {
     private var apiKey: String?
     private var groqApiKey: String?
     private let modelDefaultsKey = "TranscriptionModel"
-    private let vocabularyHintsDefaultsKey = "TranscriptionVocabularyHints"
     // Provider-prefixed model id, e.g. "openai:whisper-1", "groq:whisper-large-v3"
     @Published private(set) var transcriptionModel: String = "openai:whisper-1"
-    @Published private(set) var vocabularyHints: String = ""
 
     // Save-to-folder configuration
     @Published var saveFolderPath: String?
@@ -40,7 +38,6 @@ class TranscriptionManager: ObservableObject {
         loadGroqAPIKey()
         loadHistory()
         loadTranscriptionModel()
-        loadVocabularyHints()
         loadSaveFolderSettings()
         // Do not prompt on startup unless auto-paste is enabled
         let autoPasteEnabled = (UserDefaults.standard.object(forKey: "AutoPasteEnabled") as? Bool) ?? false
@@ -89,26 +86,6 @@ class TranscriptionManager: ObservableObject {
         transcriptionModel = model
         UserDefaults.standard.set(model, forKey: modelDefaultsKey)
         logInfo("Transcription model set to: \(model)")
-    }
-
-    private func loadVocabularyHints() {
-        vocabularyHints = UserDefaults.standard.string(forKey: vocabularyHintsDefaultsKey) ?? ""
-    }
-
-    func setVocabularyHints(_ hints: String) {
-        vocabularyHints = hints
-        UserDefaults.standard.set(hints, forKey: vocabularyHintsDefaultsKey)
-    }
-
-    private func vocabularyPrompt() -> String? {
-        let terms = vocabularyHints
-            .components(separatedBy: CharacterSet(charactersIn: ",\n"))
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
-
-        guard !terms.isEmpty else { return nil }
-        let list = terms.joined(separator: ", ")
-        return "This transcript may mention \(list). Relevant names and terms include \(list)."
     }
 
     var modelDisplayName: String {
@@ -403,12 +380,7 @@ class TranscriptionManager: ObservableObject {
         Task {
             let result: Result<String, TranscriptionError>
             do {
-                let text = try await service.transcribe(
-                    audioURL: audioURL,
-                    model: model,
-                    apiKey: authKey,
-                    prompt: vocabularyPrompt()
-                )
+                let text = try await service.transcribe(audioURL: audioURL, model: model, apiKey: authKey)
                 result = .success(text)
             } catch let error as TranscriptionError {
                 result = .failure(error)
