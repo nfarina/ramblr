@@ -56,7 +56,9 @@ You can [download the latest release here](https://github.com/nfarina/ramblr/rel
 
 ## Privacy & Storage
 
-- Audio is recorded to a temporary file during recording and removed after
+- Recordings use compact AAC audio and are retained for 24 hours by default, so they can be retried after a bad transcription or app update
+- Recent recordings can be retranscribed with another model, revealed in Finder, saved permanently, or deleted immediately
+- Audio retention and storage limits are configurable from the menu
 - Transcription history (last 10 items) and the API key are stored in UserDefaults
 - Logs are written to `~/Library/Application Support/Ramblr/Ramblr.log`
 

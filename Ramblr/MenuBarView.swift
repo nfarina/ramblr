@@ -4,6 +4,7 @@ import Sparkle
 
 struct MenuBarView: View {
     @ObservedObject var audioManager: AudioManager
+    @ObservedObject var recordingStore: RecordingStore
     @ObservedObject var hotkeyManager: HotkeyManager
     @ObservedObject var transcriptionManager: TranscriptionManager
     @ObservedObject var coordinator: RecordingCoordinator
@@ -21,8 +22,9 @@ struct MenuBarView: View {
     @State private var saveSubdirectoryFormat: String = UserDefaults.standard.string(forKey: "TranscriptionSaveSubdirectoryFormat") ?? "{year}/{month}/{day}"
 
 
-    init(audioManager: AudioManager, hotkeyManager: HotkeyManager, transcriptionManager: TranscriptionManager, coordinator: RecordingCoordinator, voiceMemosWatcher: VoiceMemosWatcher, mediaPlaybackManager: MediaPlaybackManager, updater: SPUUpdater) {
+    init(audioManager: AudioManager, recordingStore: RecordingStore, hotkeyManager: HotkeyManager, transcriptionManager: TranscriptionManager, coordinator: RecordingCoordinator, voiceMemosWatcher: VoiceMemosWatcher, mediaPlaybackManager: MediaPlaybackManager, updater: SPUUpdater) {
         self.audioManager = audioManager
+        self.recordingStore = recordingStore
         self.hotkeyManager = hotkeyManager
         self.transcriptionManager = transcriptionManager
         self.coordinator = coordinator
@@ -200,6 +202,49 @@ struct MenuBarView: View {
                 .onChange(of: saveFolderEnabled) { _, newValue in
                     transcriptionManager.setSaveFolderEnabled(newValue)
                 }
+
+                Divider().padding(.top, 6)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Picker(
+                        "Keep audio recordings:",
+                        selection: Binding(
+                            get: { recordingStore.retentionPolicy },
+                            set: { recordingStore.setRetentionPolicy($0) }
+                        )
+                    ) {
+                        ForEach(RecordingRetentionPolicy.allCases) { policy in
+                            Text(policy.displayName).tag(policy)
+                        }
+                    }
+                    .pickerStyle(.menu)
+
+                    HStack(spacing: 4) {
+                        Text("Using \(formattedStorageSize)")
+                        Text("·")
+                        Picker(
+                            "Limit:",
+                            selection: Binding(
+                                get: { recordingStore.storageLimitMB },
+                                set: { recordingStore.setStorageLimitMB($0) }
+                            )
+                        ) {
+                            Text("250 MB").tag(250)
+                            Text("500 MB").tag(500)
+                            Text("1 GB").tag(1024)
+                            Text("2 GB").tag(2048)
+                        }
+                        .labelsHidden()
+                        .pickerStyle(.menu)
+                        Button("Show Folder") {
+                            NSWorkspace.shared.open(recordingStore.recordingsDirectory)
+                        }
+                        .buttonStyle(.plain)
+                        .underline()
+                    }
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                }
             }
             .padding(.vertical, 5)
             
@@ -360,6 +405,70 @@ struct MenuBarView: View {
             .foregroundColor(.secondary)
             
             Divider()
+
+            if !recordingStore.recordings.isEmpty {
+                Text("Recent Recordings")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                VStack(alignment: .leading, spacing: 5) {
+                    ForEach(Array(recordingStore.recordings.prefix(5))) { recording in
+                        HStack(spacing: 7) {
+                            Image(systemName: recordingIcon(for: recording.status))
+                                .foregroundColor(recordingColor(for: recording.status))
+                                .frame(width: 14)
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(recording.displayTitle)
+                                Text(recordingSummary(recording))
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                    .lineLimit(1)
+                            }
+                            Spacer()
+                            Menu {
+                                Button("Transcribe Again") {
+                                    coordinator.retryRecording(recording)
+                                }
+                                .disabled(
+                                    transcriptionManager.isTranscribing
+                                        || recording.status == .recording
+                                        || recording.status == .transcribing
+                                )
+
+                                Button("Try Another Model…") {
+                                    coordinator.retryRecording(recording, chooseModel: true)
+                                }
+                                .disabled(
+                                    transcriptionManager.isTranscribing
+                                        || recording.status == .recording
+                                        || recording.status == .transcribing
+                                )
+
+                                Divider()
+
+                                Button("Reveal in Finder") {
+                                    coordinator.revealRecording(recording)
+                                }
+                                Button("Save Permanently…") {
+                                    coordinator.saveRecordingPermanently(recording)
+                                }
+
+                                Divider()
+
+                                Button("Delete Now", role: .destructive) {
+                                    coordinator.deleteRecording(recording)
+                                }
+                                .disabled(recording.status == .recording || recording.status == .transcribing)
+                            } label: {
+                                Image(systemName: "ellipsis.circle")
+                            }
+                            .menuStyle(.borderlessButton)
+                            .fixedSize()
+                        }
+                    }
+                }
+
+                Divider()
+            }
             
             // History section
             if !transcriptionManager.history.isEmpty {
@@ -427,6 +536,7 @@ struct MenuBarView: View {
         .onAppear {
             // Refresh accessibility status whenever the menu opens
             transcriptionManager.checkAccessibilityPermission(shouldPrompt: false)
+            recordingStore.cleanupExpiredRecordings()
         }
         // Detached panel used instead of sheets for key entry (prevents menu dismissal)
     }
@@ -451,6 +561,44 @@ struct MenuBarView: View {
             return "~" + path.dropFirst(home.count)
         }
         return path
+    }
+
+    private var formattedStorageSize: String {
+        ByteCountFormatter.string(fromByteCount: recordingStore.storageBytes, countStyle: .file)
+    }
+
+    private func recordingIcon(for status: RecordingStatus) -> String {
+        switch status {
+        case .recording: return "record.circle"
+        case .ready: return "waveform"
+        case .transcribing: return "ellipsis.bubble"
+        case .succeeded: return "checkmark.circle"
+        case .failed: return "exclamationmark.triangle"
+        case .cancelled: return "xmark.circle"
+        }
+    }
+
+    private func recordingColor(for status: RecordingStatus) -> Color {
+        switch status {
+        case .recording: return .red
+        case .transcribing: return .orange
+        case .failed: return .red
+        case .succeeded: return .green
+        case .ready, .cancelled: return .secondary
+        }
+    }
+
+    private func recordingSummary(_ recording: StoredRecording) -> String {
+        var components = [recording.status.displayName]
+        if let duration = recording.duration {
+            let minutes = Int(duration) / 60
+            let seconds = Int(duration) % 60
+            components.append(String(format: "%d:%02d", minutes, seconds))
+        }
+        if recording.isPermanent {
+            components.append("saved")
+        }
+        return components.joined(separator: " · ")
     }
 }
 

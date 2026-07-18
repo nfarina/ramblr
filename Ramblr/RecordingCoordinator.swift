@@ -1,11 +1,13 @@
 import SwiftUI
 import Combine
 import AppKit
+import UniformTypeIdentifiers
 
 class RecordingCoordinator: ObservableObject {
     private var audioManager: AudioManager
     private var transcriptionManager: TranscriptionManager
     private var mediaPlaybackManager: MediaPlaybackManager
+    private var recordingStore: RecordingStore
     private var notificationObserver: NSObjectProtocol?
     private var lastRecordingURL: URL? // Store the last recording URL for retry
     private var clipboardOnlyRecording = false
@@ -13,11 +15,17 @@ class RecordingCoordinator: ObservableObject {
 
     @Published var transcriptionStatus: String = ""
 
-    init(audioManager: AudioManager, transcriptionManager: TranscriptionManager, mediaPlaybackManager: MediaPlaybackManager) {
+    init(
+        audioManager: AudioManager,
+        transcriptionManager: TranscriptionManager,
+        mediaPlaybackManager: MediaPlaybackManager,
+        recordingStore: RecordingStore
+    ) {
         logInfo("RecordingCoordinator: Initializing")
         self.audioManager = audioManager
         self.transcriptionManager = transcriptionManager
         self.mediaPlaybackManager = mediaPlaybackManager
+        self.recordingStore = recordingStore
 
         // Observe audio levels for waveform indicator
         self.audioManager.$audioLevels.sink { levels in
@@ -83,7 +91,7 @@ class RecordingCoordinator: ObservableObject {
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
         panel.canChooseFiles = true
-        panel.allowedFileTypes = ["wav", "mp3", "m4a", "aac", "flac", "ogg", "opus", "mp4", "mkv", "webm", "qta"]
+        panel.allowedContentTypes = [.audio, .movie]
 
         let response = panel.runModal()
         guard response == .OK, let selectedURL = panel.url else { return }
@@ -105,17 +113,8 @@ class RecordingCoordinator: ObservableObject {
         WaveformIndicatorWindow.shared.hide()
         
         if let url = audioManager.stopRecording() {
-            // Move the file next to the default recording file as cancelled.wav
-            let dir = url.deletingLastPathComponent()
-            let destURL = dir.appendingPathComponent("cancelled.wav")
-            // Remove existing cancelled.wav if present
-            try? FileManager.default.removeItem(at: destURL)
-            do {
-                try FileManager.default.moveItem(at: url, to: destURL)
-                logInfo("RecordingCoordinator: Saved cancelled recording to \(destURL.path)")
-            } catch {
-                logError("RecordingCoordinator: Failed to move cancelled recording: \(error)")
-            }
+            recordingStore.markCancelled(url: url)
+            logInfo("RecordingCoordinator: Retained cancelled recording at \(url.path)")
         }
         DispatchQueue.main.async {
             self.transcriptionManager.statusMessage = "Recording cancelled"
@@ -180,8 +179,12 @@ class RecordingCoordinator: ObservableObject {
         }
     }
     
-    private func transcribeAudio(recordingURL: URL) {
+    private func transcribeAudio(recordingURL: URL, forceClipboardOnly: Bool? = nil) {
         logInfo("Beginning transcription for file: \(recordingURL.lastPathComponent)")
+        recordingStore.markTranscribing(
+            url: recordingURL,
+            model: transcriptionManager.transcriptionModel
+        )
         
         // Use the new transcribeWithRetry method
         transcriptionManager.transcribeWithRetry(audioURL: recordingURL) { [weak self] text in
@@ -189,15 +192,23 @@ class RecordingCoordinator: ObservableObject {
             
             if let text = text {
                 let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-                logInfo("RecordingCoordinator: Received transcription: \(trimmed)")
-                logInfo("Transcription successful: \(trimmed.prefix(50))...")
+                logInfo("RecordingCoordinator: Received transcription of \(trimmed.count) characters")
+                self.recordingStore.markSucceeded(
+                    url: recordingURL,
+                    model: self.transcriptionManager.transcriptionModel,
+                    transcript: trimmed
+                )
                 // Hide indicator on successful transcription
                 WaveformIndicatorWindow.shared.hide()
                 // Read the latest clipboardOnly state (user may have toggled via indicator bubble)
-                let clipboardOnly = WaveformIndicatorWindow.shared.clipboardOnly
+                let clipboardOnly = forceClipboardOnly ?? WaveformIndicatorWindow.shared.clipboardOnly
                 self.transcriptionManager.handleTranscriptionOutput(trimmed, clipboardOnly: clipboardOnly)
             } else {
                 logError("RecordingCoordinator: Transcription failed after retries")
+                self.recordingStore.markFailed(
+                    url: recordingURL,
+                    model: self.transcriptionManager.transcriptionModel
+                )
                 // Hide indicator on failed transcription
                 WaveformIndicatorWindow.shared.hide()
                 DispatchQueue.main.async {
@@ -280,10 +291,86 @@ class RecordingCoordinator: ObservableObject {
     
     // Function to retry the last transcription from outside this class if needed
     func retryLastTranscription() {
-        if let lastURL = lastRecordingURL {
+        if let lastURL = lastRecordingURL, FileManager.default.fileExists(atPath: lastURL.path) {
             logInfo("Retrying last transcription attempt")
-            transcribeAudio(recordingURL: lastURL)
+            transcribeAudio(recordingURL: lastURL, forceClipboardOnly: true)
+        } else if let recording = recordingStore.recordings.first {
+            retryRecording(recording)
         }
+    }
+
+    func retryRecording(_ recording: StoredRecording, chooseModel: Bool = false) {
+        guard !transcriptionManager.isTranscribing else { return }
+        let url = recordingStore.audioURL(for: recording)
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            recordingStore.delete(recording)
+            showFileSelectionError()
+            return
+        }
+
+        let transcribe = { [weak self] in
+            guard let self else { return }
+            self.lastRecordingURL = url
+            WaveformIndicatorWindow.shared.showTranscribing()
+            self.transcribeAudio(recordingURL: url, forceClipboardOnly: true)
+        }
+
+        guard chooseModel else {
+            transcribe()
+            return
+        }
+
+        ModelSetupPanel.shared.show(
+            model: transcriptionManager.transcriptionModel,
+            openAIKey: transcriptionManager.currentOpenAIKey,
+            groqKey: transcriptionManager.currentGroqAPIKey
+        ) { [weak self] model, openAIKey, groqKey in
+            guard let self else { return }
+            self.transcriptionManager.setAPIKey(openAIKey)
+            self.transcriptionManager.setGroqAPIKey(groqKey)
+            self.transcriptionManager.setTranscriptionModel(model)
+            transcribe()
+        }
+    }
+
+    func revealRecording(_ recording: StoredRecording) {
+        let url = recordingStore.audioURL(for: recording)
+        NSWorkspace.shared.selectFile(url.path, inFileViewerRootedAtPath: "")
+    }
+
+    func saveRecordingPermanently(_ recording: StoredRecording) {
+        let sourceURL = recordingStore.audioURL(for: recording)
+        let panel = NSSavePanel()
+        panel.title = "Save Recording"
+        panel.nameFieldStringValue = sourceURL.lastPathComponent
+        panel.allowedContentTypes = [.mpeg4Audio]
+        guard panel.runModal() == .OK, let destinationURL = panel.url else { return }
+
+        if destinationURL.standardizedFileURL == sourceURL.standardizedFileURL {
+            recordingStore.markPermanent(recording)
+            return
+        }
+
+        do {
+            if FileManager.default.fileExists(atPath: destinationURL.path) {
+                try FileManager.default.removeItem(at: destinationURL)
+            }
+            try FileManager.default.copyItem(at: sourceURL, to: destinationURL)
+            recordingStore.markPermanent(recording)
+            logInfo("RecordingCoordinator: Saved recording permanently to \(destinationURL.path)")
+        } catch {
+            logError("RecordingCoordinator: Failed to save recording permanently: \(error)")
+            let alert = NSAlert()
+            alert.messageText = "Could Not Save Recording"
+            alert.informativeText = error.localizedDescription
+            alert.alertStyle = .warning
+            alert.runModal()
+        }
+    }
+
+    func deleteRecording(_ recording: StoredRecording) {
+        guard recording.status != .recording && recording.status != .transcribing else { return }
+        recordingStore.delete(recording)
     }
     
     deinit {

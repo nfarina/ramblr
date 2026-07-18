@@ -35,9 +35,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
 
 @main
 struct RamblrApp: App {
-    @StateObject private var audioManager = AudioManager()
-    @StateObject private var hotkeyManager = HotkeyManager()
-    @StateObject private var transcriptionManager = TranscriptionManager()
+    @StateObject private var recordingStore: RecordingStore
+    @StateObject private var audioManager: AudioManager
+    @StateObject private var hotkeyManager: HotkeyManager
+    @StateObject private var transcriptionManager: TranscriptionManager
     @StateObject private var coordinator: RecordingCoordinator
     @StateObject private var voiceMemosWatcher: VoiceMemosWatcher
     @StateObject private var mediaPlaybackManager: MediaPlaybackManager
@@ -50,7 +51,8 @@ struct RamblrApp: App {
         logInfo("RamblrApp: Initializing")
         
         // Create managers first
-        let audio = AudioManager()
+        let recordingStore = RecordingStore()
+        let audio = AudioManager(recordingStore: recordingStore)
         let transcription = TranscriptionManager()
         let hotkey = HotkeyManager()
         let mediaPlayback = MediaPlaybackManager()
@@ -59,11 +61,13 @@ struct RamblrApp: App {
         let coordinator = RecordingCoordinator(
             audioManager: audio,
             transcriptionManager: transcription,
-            mediaPlaybackManager: mediaPlayback
+            mediaPlaybackManager: mediaPlayback,
+            recordingStore: recordingStore
         )
         let voiceMemos = VoiceMemosWatcher(transcriptionManager: transcription)
 
         // Now create the StateObjects
+        _recordingStore = StateObject(wrappedValue: recordingStore)
         _audioManager = StateObject(wrappedValue: audio)
         _hotkeyManager = StateObject(wrappedValue: hotkey)
         _transcriptionManager = StateObject(wrappedValue: transcription)
@@ -80,6 +84,7 @@ struct RamblrApp: App {
     var body: some Scene {
         MenuBarExtra {
             MenuBarView(audioManager: audioManager,
+                       recordingStore: recordingStore,
                        hotkeyManager: hotkeyManager,
                        transcriptionManager: transcriptionManager,
                        coordinator: coordinator,

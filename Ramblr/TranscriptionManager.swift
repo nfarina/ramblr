@@ -39,6 +39,7 @@ class TranscriptionManager: ObservableObject {
         loadHistory()
         loadTranscriptionModel()
         loadSaveFolderSettings()
+        cleanupStaleChunkFiles()
         // Do not prompt on startup unless auto-paste is enabled
         let autoPasteEnabled = (UserDefaults.standard.object(forKey: "AutoPasteEnabled") as? Bool) ?? false
         if autoPasteEnabled {
@@ -109,6 +110,9 @@ class TranscriptionManager: ObservableObject {
     var requiredKeyName: String {
         transcriptionModel.hasPrefix("groq:") ? "Groq" : "OpenAI"
     }
+
+    var currentOpenAIKey: String { apiKey ?? "" }
+    var currentGroqAPIKey: String { groqApiKey ?? "" }
     
     func checkAccessibilityPermission(shouldPrompt: Bool = false) {
         // Check if we have accessibility permission
@@ -289,6 +293,12 @@ class TranscriptionManager: ObservableObject {
         )
         var chunkURLs: [URL] = []
         var chunkIndex = 0
+        var completedSuccessfully = false
+        defer {
+            if !completedSuccessfully {
+                cleanupChunkFiles(chunkURLs)
+            }
+        }
 
         while audioFile.framePosition < audioFile.length {
             let framesRemaining = audioFile.length - audioFile.framePosition
@@ -331,6 +341,7 @@ class TranscriptionManager: ObservableObject {
             chunkIndex += 1
         }
 
+        completedSuccessfully = true
         return chunkURLs
     }
 
@@ -343,6 +354,23 @@ class TranscriptionManager: ObservableObject {
     private func cleanupChunkFiles(_ chunkURLs: [URL]) {
         for url in chunkURLs {
             try? FileManager.default.removeItem(at: url)
+        }
+    }
+
+    private func cleanupStaleChunkFiles() {
+        let tempDirectory = URL(fileURLWithPath: "/tmp", isDirectory: true)
+        guard let contents = try? FileManager.default.contentsOfDirectory(
+            at: tempDirectory,
+            includingPropertiesForKeys: [.contentModificationDateKey],
+            options: [.skipsHiddenFiles]
+        ) else { return }
+
+        let staleBefore = Date().addingTimeInterval(-60 * 60)
+        for url in contents where url.lastPathComponent.hasPrefix("ramblr-chunk-") {
+            let modifiedAt = try? url.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate
+            if (modifiedAt ?? .distantPast) < staleBefore {
+                try? FileManager.default.removeItem(at: url)
+            }
         }
     }
 

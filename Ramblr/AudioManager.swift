@@ -12,6 +12,7 @@ class AudioManager: NSObject, ObservableObject {
     private var converter: AVAudioConverter?
     private var volumeMeter: AVAudioMixerNode?
     private let audioQueue = DispatchQueue(label: "com.nfarina.Ramblr.audio")
+    private let recordingStore: RecordingStore
     
     // Audio analysis parameters
     private var totalSamples: Int = 0
@@ -23,10 +24,29 @@ class AudioManager: NSObject, ObservableObject {
     private let silenceThreshold: Float = 0.01 // Adjust this to change sensitivity
     private let minimumDuration: TimeInterval = 0.0 // Minimum recording duration in seconds
     private let maximumSilencePercentage: Float = 1.0 // Maximum percentage of silence allowed
+
+    private var whisperFormat: AVAudioFormat {
+        AVAudioFormat(
+            commonFormat: .pcmFormatFloat32,
+            sampleRate: 16000,
+            channels: 1,
+            interleaved: false
+        )!
+    }
+
+    private var recordingSettings: [String: Any] {
+        [
+            AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
+            AVSampleRateKey: 16_000,
+            AVNumberOfChannelsKey: 1,
+            AVEncoderBitRateKey: 32_000,
+            AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue,
+        ]
+    }
     
-    override init() {
+    init(recordingStore: RecordingStore) {
+        self.recordingStore = recordingStore
         super.init()
-        setupRecordingURL()
         requestMicrophoneAccess()
     }
     
@@ -57,12 +77,6 @@ class AudioManager: NSObject, ObservableObject {
         }
     }
     
-    private func setupRecordingURL() {
-        let tempPath = URL(fileURLWithPath: "/tmp")
-        recordingURL = tempPath.appendingPathComponent("ramble.wav")
-        try? FileManager.default.removeItem(at: recordingURL!)
-    }
-    
     private func setupAudioEngine() {
         logInfo("AudioManager: Setting up audio engine")
         
@@ -85,13 +99,10 @@ class AudioManager: NSObject, ObservableObject {
         
         let inputFormat = inputNode.inputFormat(forBus: 0)
         analysisSampleRate = inputFormat.sampleRate
-        let whisperFormat = AVAudioFormat(commonFormat: .pcmFormatFloat32,
-                                        sampleRate: 16000,
-                                        channels: 1,
-                                        interleaved: false)!
+        let outputFormat = self.whisperFormat
         
         logDebug("AudioManager: Input format: \(inputFormat)")
-        logDebug("AudioManager: Whisper format: \(whisperFormat)")
+        logDebug("AudioManager: Whisper format: \(outputFormat)")
         
         volumeMeter.volume = 1.0
         audioEngine.connect(inputNode, to: volumeMeter, format: inputFormat)
@@ -99,9 +110,7 @@ class AudioManager: NSObject, ObservableObject {
         
         volumeMeter.installTap(onBus: 0, bufferSize: 1024, format: inputFormat) { [weak self] (buffer, time) in
             self?.audioQueue.async { [weak self] in
-                guard let self = self,
-                      let recordingURL = self.recordingURL,
-                      self.isRecording else { return }
+                guard let self = self, self.isRecording else { return }
                 
                 // Extract audio levels for waveform visualization
                 self.extractAudioLevels(buffer)
@@ -114,13 +123,13 @@ class AudioManager: NSObject, ObservableObject {
                 
                 var convertedBuffer: AVAudioPCMBuffer?
                 
-                if self.converter == nil && inputFormat != whisperFormat {
-                    self.converter = AVAudioConverter(from: inputFormat, to: whisperFormat)
+                if self.converter == nil && inputFormat != outputFormat {
+                    self.converter = AVAudioConverter(from: inputFormat, to: outputFormat)
                 }
                 
                 if let converter = self.converter {
                     let frameCount = AVAudioFrameCount(Float(buffer.frameLength) * Float(16000) / Float(inputFormat.sampleRate))
-                    convertedBuffer = AVAudioPCMBuffer(pcmFormat: whisperFormat,
+                    convertedBuffer = AVAudioPCMBuffer(pcmFormat: outputFormat,
                                                      frameCapacity: frameCount)
                     convertedBuffer?.frameLength = frameCount
                     
@@ -143,17 +152,6 @@ class AudioManager: NSObject, ObservableObject {
                 }
                 
                 guard let finalBuffer = convertedBuffer else { return }
-                
-                if self.audioFile == nil {
-                    do {
-                        self.audioFile = try AVAudioFile(forWriting: recordingURL,
-                                                        settings: whisperFormat.settings)
-                        logInfo("AudioManager: Created new audio file at \(recordingURL)")
-                    } catch {
-                        logError("AudioManager: Failed to create audio file: \(error)")
-                        return
-                    }
-                }
                 
                 do {
                     try self.audioFile?.write(from: finalBuffer)
@@ -280,6 +278,13 @@ class AudioManager: NSObject, ObservableObject {
     
     func startRecording() {
         logInfo("AudioManager: Starting recording")
+
+        do {
+            recordingURL = try recordingStore.beginRecording()
+        } catch {
+            logError("AudioManager: Failed to reserve recording file: \(error)")
+            return
+        }
         
         // Initialize with full buffer of baseline levels to avoid left-to-right fill
         DispatchQueue.main.async { [weak self] in
@@ -300,11 +305,34 @@ class AudioManager: NSObject, ObservableObject {
             
             guard let audioEngine = self.audioEngine else {
                 logError("AudioManager: No audio engine available")
+                if let recordingURL = self.recordingURL {
+                    DispatchQueue.main.async {
+                        self.recordingStore.delete(url: recordingURL)
+                    }
+                }
                 return
             }
             
-            try? FileManager.default.removeItem(at: self.recordingURL!)
-            self.audioFile = nil
+            guard let recordingURL = self.recordingURL else { return }
+            do {
+                self.audioFile = try AVAudioFile(
+                    forWriting: recordingURL,
+                    settings: self.recordingSettings,
+                    commonFormat: self.whisperFormat.commonFormat,
+                    interleaved: self.whisperFormat.isInterleaved
+                )
+                try? FileManager.default.setAttributes(
+                    [.posixPermissions: 0o600],
+                    ofItemAtPath: recordingURL.path
+                )
+                logInfo("AudioManager: Created new audio file at \(recordingURL)")
+            } catch {
+                logError("AudioManager: Failed to create audio file: \(error)")
+                DispatchQueue.main.async {
+                    self.recordingStore.delete(url: recordingURL)
+                }
+                return
+            }
             
             do {
                 try audioEngine.start()
@@ -317,6 +345,11 @@ class AudioManager: NSObject, ObservableObject {
                 logInfo("AudioManager: Recording started successfully")
             } catch {
                 logError("AudioManager: Failed to start recording: \(error.localizedDescription)")
+                if let recordingURL = self.recordingURL {
+                    DispatchQueue.main.async {
+                        self.recordingStore.delete(url: recordingURL)
+                    }
+                }
             }
         }
     }
@@ -356,17 +389,25 @@ class AudioManager: NSObject, ObservableObject {
         
         // Check if the recording is valid
         if !isRecordingValid() {
-            try? FileManager.default.removeItem(at: recordingURL)
+            recordingStore.delete(url: recordingURL)
             return nil
         }
         
         // Verify the file exists before returning
         if FileManager.default.fileExists(atPath: recordingURL.path) {
+            recordingStore.markReady(url: recordingURL, duration: recordingDuration)
             logInfo("AudioManager: Recording saved successfully at \(recordingURL)")
             return recordingURL
         }
         logError("AudioManager: Recording file not found at \(recordingURL)")
+        recordingStore.delete(url: recordingURL)
         return nil
+    }
+
+    private var recordingDuration: TimeInterval {
+        analysisSampleRate > 0
+            ? TimeInterval(totalSamples) / analysisSampleRate
+            : 0
     }
 
 }
