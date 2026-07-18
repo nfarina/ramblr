@@ -6,6 +6,25 @@
         <description>Updates for Ramblr</description>
         <language>en</language>
         <item>
+            <title>1.9.0</title>
+            <pubDate>Fri, 17 Jul 2026 17:55:01 -0700</pubDate>
+            <link>https://nfarina.github.io/ramblr</link>
+            <sparkle:fullReleaseNotesLink>https://github.com/nfarina/ramblr/releases/tag/v1.9.0</sparkle:fullReleaseNotesLink>
+            <sparkle:version>20</sparkle:version>
+            <sparkle:shortVersionString>1.9.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>15.2</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <description sparkle:format="markdown"><![CDATA[## What's new
+
+- Recent recordings are now kept safely across app updates and relaunches, with a 24-hour default retention window.
+- Retranscribe any recent recording, try another model, reveal it in Finder, save it permanently, or delete it immediately.
+- Configure audio retention and a storage limit directly from the Ramblr menu.
+- Desktop recordings now use compact AAC audio with unique filenames instead of a shared temporary WAV file.
+- Failed and interrupted recordings are preserved for recovery, while disposable upload chunks are cleaned up safely.
+]]></description>
+            <enclosure url="https://github.com/nfarina/ramblr/releases/download/v1.9.0/Ramblr-1.9.0-macos.zip" length="3000626" type="application/octet-stream" sparkle:edSignature="YUkPIwDx/GIcUOI3S51awFCcnD00fAf+FVUZP3bvhrZB8uTMbc/UmZ0iv/n6y+wzq3Z/XUcuFnfhUx16L1SpAA=="/>
+        </item>
+        <item>
             <title>1.8.1</title>
             <pubDate>Thu, 16 Jul 2026 15:14:38 -0700</pubDate>
             <link>https://nfarina.github.io/ramblr</link>
@@ -34,20 +53,6 @@
 
 - Supports "Vocabulary hints" in Transcription Setup for oft-misspelled words like [your startup name]]]></description>
             <enclosure url="https://github.com/nfarina/ramblr/releases/download/v1.8.0/Ramblr-1.8.0-macos.zip" length="2933493" type="application/octet-stream" sparkle:edSignature="lPOsKXX+o9G/UdFm/Tx//wlxsJhp+wudM0phz/zaX7BzE7S7CnltD75nov4yOnme0Du4vtyfCi5By8e3bDLABQ=="/>
-        </item>
-        <item>
-            <title>1.7.6</title>
-            <pubDate>Sat, 11 Jul 2026 09:04:48 -0700</pubDate>
-            <link>https://nfarina.github.io/ramblr</link>
-            <sparkle:fullReleaseNotesLink>https://github.com/nfarina/ramblr/releases/tag/v1.7.6</sparkle:fullReleaseNotesLink>
-            <sparkle:version>17</sparkle:version>
-            <sparkle:shortVersionString>1.7.6</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>15.2</sparkle:minimumSystemVersion>
-            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <description sparkle:format="markdown"><![CDATA[## What's new
-
-- Fix for transcribing audio files with certain lengths]]></description>
-            <enclosure url="https://github.com/nfarina/ramblr/releases/download/v1.7.6/Ramblr-1.7.6-macos.zip" length="2929512" type="application/octet-stream" sparkle:edSignature="By5o0jwkmcwCupoPmEZjpaSGV3sqOp7Aqc41epeYW/2abnFR+5t8ldMzLG28H3jAj8xyNo2Hupr0MNHQwgdxCg=="/>
         </item>
     </channel>
 </rss>
